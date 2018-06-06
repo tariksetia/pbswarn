@@ -267,7 +267,9 @@ flatten_fips <- function(msg) {
                       grepl("KY Carter city",areas$areaname) ~ "21043",
                       grepl("VA Roanoke city",areas$areaname) ~ "51770",
                       grepl("MN McLeod city",areas$areaname) ~ "27085",
-                      ## Account for accents in county names ##
+                      grepl("AK Wrangell-Petersburg", areas$areaname) ~ "02275",
+                      
+                                           ## Account for accents in county names ##
                       grepl("NM Dona Ana", areas$areaname) ~ "35013", ## Account for ñ
                       grepl("PR Anasco", areas$areaname) ~ "72011", ## Account for ñ
                       grepl("PR Catano", areas$areaname) ~ "72033", ## Account for ñ
@@ -315,16 +317,17 @@ classify_message <- function(msg) {
     )
 }
 
-tally_alerts <- function(df = msg2
-                         , fips_msg = fips_msg
-                         , start = NULL
-                         , end = NULL) {
-    if(is.null(start)) start = min(df$rec_time)
-    if(is.null(end)) end = max(df$rec_time)
-    df %>%
-        filter(rec_time >= start) %>%
-        filter(rec_time <= end) %>%
-        left_join(fips_msg) %>%
+tally_alerts <- function(df = msg2, fipsMsg = fips_msg,
+                        start = NULL,
+                        end = NULL 
+                        ) {
+  #  browser()
+  #  if(is.null(start)) start = min(df$rec_time)
+  #  if(is.null(end)) end = max(df$rec_time)
+    t <- df %>%
+        #filter(rec_time >= start) %>%
+        #filter(rec_time <= end) %>%
+        left_join(fipsMsg) %>%
         select(msg_id, GEOID, type) %>%
         mutate(GEOID = factor(GEOID, levels = levels(counties_sf$GEOID))) %>% 
         group_by(GEOID, type) %>%
@@ -332,7 +335,13 @@ tally_alerts <- function(df = msg2
         rename(WEATYPE = type, WEANUM = n) %>%
         spread(WEATYPE, WEANUM, fill = "0",drop = TRUE, convert = TRUE) %>%
         mutate(Total = AMBER + FlashFlood
-               + Hurricane + Other + Tornado)}
+               + Hurricane + Other + Tornado)
+       
+ #   t[is.na(t)] <- 0
+    
+    return(t)
+    
+    }
 
 ######################
 ## Run Functions  ####

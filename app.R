@@ -54,7 +54,9 @@ if (!file.exists('data/wea_alerts.rda')) {
     load_vars()
     rm(list = c("all_cmas","ss_new"), envir = .GlobalEnv)
     save.image(file = "data/wea_alerts.rda") 
-    } else load(file = "data/wea_alerts.rda")
+    } 
+
+load(file = "data/wea_alerts.rda")
 
 ui <- dashboardPage(title = "WEA Distribution by County",
                     skin = "black",
