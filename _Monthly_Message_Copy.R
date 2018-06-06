@@ -2,16 +2,18 @@
 # "CMAS_Alerts_Processed" sheet
 
 ## Install packages ##
-if (require(tidyverse) == FALSE) {
-  install.packages("tidyverse")
-  library(tidyverse)
-  library(lubridate)
-}
-if (require(googlesheets) == FALSE) {
-  install.packages("googlesheets")
-  library(googlesheets)
-}
+# if (require(tidyverse) == FALSE) {
+#   install.packages("tidyverse")
+# 
+# }
+# if (require(googlesheets) == FALSE) {
+#   install.packages("googlesheets")
+# 
+# }
 
+library(tidyverse)
+library(lubridate)
+library(googlesheets)
 ##
 
 NewCMASImport <- function() { #copies new messages into main sheet
