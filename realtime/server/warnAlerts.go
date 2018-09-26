@@ -43,7 +43,7 @@ func update() {
 	}
 
 	// save out to AJAX data file
-	err = ioutil.WriteFile("/var/www/html/alerts.xml", []byte(alert), 0644)
+	err = ioutil.WriteFile("/var/www/html/alerts.json", []byte(alert), 0644)
 	check(err)
 }
 
