@@ -215,7 +215,7 @@ function clearMap() {
 // Get the current alerts in JSON from server
 function poll() {
     $.ajax({
-      url: "alerts.xml",
+      url: "alerts.json",
       data: "",
       success: success,
       error: success,
