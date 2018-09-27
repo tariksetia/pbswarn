@@ -34,7 +34,7 @@ func update() {
 	alert := "["
 	for rows.Next() {
 		var json string
-		rows.Scan(&json)
+		rows.Scan(&json) // extract the JSON from the DB record
 		alert = alert + json + ", "
 	}
 	if alert == "[" {
