@@ -16,7 +16,8 @@ func main() {
 	db, err := sql.Open("mysql", "warn:warn@tcp(192.168.2.1:3306)/warn")
 	check(err)
 	defer db.Close()
-	statement, err = db.Prepare("select json from warn.alerts where expires > now()")
+	//statement, err = db.Prepare("select json from warn.alerts where expires > now()")
+	statement, err = db.Prepare("select json from alerts where unix_timestamp(expires) > unix_timestamp(utc_timestamp())")
 	check(err)
 	for {
 		update()
