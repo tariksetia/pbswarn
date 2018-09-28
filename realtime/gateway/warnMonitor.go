@@ -58,6 +58,7 @@ type mapItem struct {
 }
 
 func main() {
+    // setup
     inMessage = false
     replacer = *strings.NewReplacer("&#xA;", "\n")
     breaker = []byte{0x47, 0x09, 0x11} // Start of MPEG Packet break?
@@ -96,6 +97,9 @@ func messageProc(message []byte) {
     // parse message into Alert struct
     alert := parseAlert(message)
     // GRAB THE EXPIRES TIME
+    if len(alert.Infos) == 0 { // if no info blocks, don't process
+        log.Println("No Info:\n", string(message))
+    }
     expiresTime := alert.Infos[0].ExpiresDate
     // pretty-print the Alert as an XML string
     capString := toXML(alert)
@@ -103,7 +107,7 @@ func messageProc(message []byte) {
     // if CAP is not dupe, send it to the database
     if capString != lastMsg {
         go toDatabase(capString, &alert, receivedTime, expiresTime)
-        log.Println(capString)
+        //log.Println(capString)
         log.Println("Received", receivedTime)
         log.Println("Expires", expiresTime)
         fmt.Println()
@@ -145,7 +149,8 @@ func toDatabase(capString string, alert *cap.Alert, received string, expires str
     //poly = ""
 
     var dispPoly []string
-        
+    
+    // GEOCODE Mapping
     // if no polygon in received alert, look up SAME FIPS equivalent polys
     if poly == "" {
         geocodes := area.GeocodeAll("SAME")
@@ -182,7 +187,7 @@ func toDatabase(capString string, alert *cap.Alert, received string, expires str
         dispPoly = append(dispPoly, poly)
     }
 
-    // place map message contents in the correct struct
+    // build map message struct
     j := mapItem{}
 	j.ID = alert.MessageID
 	j.Sender = alert.SenderID
@@ -200,7 +205,7 @@ func toDatabase(capString string, alert *cap.Alert, received string, expires str
     j.Geocodes = area.GeocodeAll("SAME")
     j.Polygons = dispPoly
 
-    // create JSON extract for PBS WARN map
+    // serialize struct as JSON to go to database
     var jsn []byte
     if jsn, err = json.Marshal(j); err != nil {
         log.Print("json.Marshal", err)
@@ -229,7 +234,7 @@ func toDatabase(capString string, alert *cap.Alert, received string, expires str
 }
 
 /*****************************************************
-    FROM HERE DOWN ARE ASSORTED UTILITY FUNCTIONS
+                    UTILITIES
 *****************************************************/
 
 // remove all instances of a byte slice from within another byte slice
@@ -256,6 +261,7 @@ func toXML(alert cap.Alert) string {
         log.Print(err)
         return ""
     }
+    bytes.Trim(cap, "\x00")
     // return indented XML with C18n XML-escaped newlines ("&#xA;") replaced
     return "<?xml version='UTF-8' encoding='UTF-8'?>\n" + replacer.Replace(string(cap))
 }
