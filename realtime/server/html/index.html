@@ -26,6 +26,22 @@
         .container {
           margin-top: 20px;
         }
+        #hb {
+            position: absolute;
+            top:15px;
+            left: 100px;
+            height: 20px;
+            width: 200px;
+            padding-left: 13px;
+            z-index:1000;
+            background: rgba(255,255,255,.5);
+        }
+        #hb_stamp {
+            color: #666;
+            opacity: 1;
+            font-family:sans-serif;
+            font-size:10pt;
+        }
         #slideout {
           background: #fff;
           opacity:0.8;
@@ -71,6 +87,8 @@
       
       <div id="map" class="map" style="{height:100%;z-index:-99;}" tabindex="0"><div id="logo"><img src="WARN-Logo-Blk-PBS-Web-Sized.png" ></div></div>
       <div class="container">
+          
+          <div id="hb"><span id="hb_stamp"></span></div>
   
       <button type="button" id="about">About This Map</button>
       <script>
@@ -101,3 +119,4 @@
       
   </body>
 </html>
+
