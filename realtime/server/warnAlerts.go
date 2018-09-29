@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+
 	_ "github.com/go-sql-driver/mysql"
 
 	"io/ioutil"
@@ -10,6 +11,7 @@ import (
 )
 
 var statement *sql.Stmt
+var statement2 *sql.Stmt
 var err error
 
 func main() {
@@ -18,18 +20,23 @@ func main() {
 	defer db.Close()
 	//statement, err = db.Prepare("select json from warn.alerts where expires > now()")
 	statement, err = db.Prepare("select json from alerts where unix_timestamp(expires) > unix_timestamp(utc_timestamp())")
+	statement2, err = db.Prepare("select time from warn.updated where ID = 1")
 	check(err)
 	for {
 		update()
-		time.Sleep(7 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 }
 
 func update() {
-
-	rows, err := statement.Query() // execute our select statement
+	var timestamp string
+	rows, err := statement2.Query() // execute our select statement
 	check(err)
-
+	for rows.Next() {
+		rows.Scan(&timestamp)
+	}
+	rows, err = statement.Query() // execute our select statement
+	check(err)
 	// extract JSON from the retrieved alerts and construct a single JSON array string
 	alert := "["
 	for rows.Next() {
@@ -42,9 +49,10 @@ func update() {
 	} else {
 		alert = alert[0:len(alert)-2] + "]" // trim trailing ", " before closing bracket
 	}
-
+	// build heartbeat timestamp into JSON for browser
+	update := "{\"heartbeat\":\"" + timestamp + "\", \"alerts\":" + alert + "}"
 	// save out to AJAX data file
-	err = ioutil.WriteFile("/var/www/html/alerts.json", []byte(alert), 0644)
+	err = ioutil.WriteFile("/var/www/html/alerts.json", []byte(update), 0644)
 	check(err)
 }
 
