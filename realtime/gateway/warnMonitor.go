@@ -2,16 +2,15 @@ package main
 
 import (
     "bytes"
-    "crypto/sha256"
     "database/sql"
     "encoding/json"
     "encoding/xml"
-    "fmt"
     "hash"
     "log"
     "pbs/warn/catcher"
     "strings"
     "time"
+    "fmt"
 
     // mysql driver
     _ "github.com/go-sql-driver/mysql"
@@ -30,7 +29,7 @@ var (
     result    sql.Result
     rows      *sql.Rows
     dispPoly  string
-    channel   chan []byte
+    warnChannel   chan []byte
 )
 
 const (
@@ -62,8 +61,6 @@ func main() {
     inMessage = false
     replacer = *strings.NewReplacer("&#xA;", "\n")
     breaker = []byte{0x47, 0x09, 0x11} // Start of MPEG Packet break?
-    // create SHA256 hash engine
-    h = sha256.New()
     // set up and exercise database connection
     if db, err = sql.Open("mysql", dsn); err != nil {
         log.Fatal("Can't open database", err)
@@ -77,45 +74,76 @@ func main() {
         log.Println("Connected to", version)
     }
     // catcher is a goroutine that monitors the UDP source and hands back raw XML
-    channel = make(chan []byte)
-    go catcher.Run(channel) // in catcher.go
+    warnChannel = make(chan []byte)
+    go catcher.Run(warnChannel) // in catcher.go
     for {
-        messageProc(<-channel) // XML as []byte
+        messageProcessor(<-warnChannel) // XML as []byte
     }
 }
 
 // validates XML via Unmarshall/Marshall round trip to CAP structure from
 // "github.com/mark-adams/cap-go/cap"
 // also pulls aside a few details and passes them all to the database
-func messageProc(message []byte) {
+func messageProcessor(message []byte) {
 
     // take out any nulls, esp at start
     bytes.Trim(message, "\x00")
 
     receivedTime := time.Now().Format(time.RFC3339)
 
-    // parse message into Alert struct
-    alert := parseAlert(message)
-    // GRAB THE EXPIRES TIME
-    if len(alert.Infos) == 0 { // if no info blocks, don't process
-        log.Println("No Info:\n", string(message))
+    // update heartbeat to database
+    statement := `update  updated set timestamp = ? where ID = 1`
+    ps, err := db.Prepare(statement)
+    check(err)
+    // execute DB statement
+    _, err = ps.Exec(receivedTime)
+    check (err)
+    ps.Close()
+
+    // if heartbeat message, do no more
+    if bytes.Equal([]byte("heartbeat"), message) {
+        hbTime := time.Now().UTC().Format(time.RFC822)
+        fmt.Println("Heartbeat: ", hbTime)
+        return
     }
-    expiresTime := alert.Infos[0].ExpiresDate
+
+    // parse message into Alert struct per github.com/mark-adams/cap-go/cap
+    var alert cap.Alert
+    var uniqueID string
+    var expiresTime string
+    alert = parseAlert(message)
+    // if cancel or update, mark referenced earlier message in DB
+    if alert.MessageType == "Cancel" {
+        uniqueID = alert.SenderID + "," + alert.MessageID + "," + alert.SentDate
+        for replaces := range alert.ReferenceIDs {
+            log.Println(replaces, " replaced by ", uniqueID)
+            statement := `update  alerts set replacedBy = ? where identifer = ?`
+            ps, err := db.Prepare(statement)
+            check(err)
+            // execute DB statement
+            _, err = ps.Exec(uniqueID, replaces)
+            check (err)
+            ps.Close()
+        }
+    }
+    // If no Infos, it must be a cancel, expire it immediately
+    if len(alert.Infos) == 0 {
+        expiresTime = receivedTime
+    } else {
+        expiresTime = alert.Infos[0].ExpiresDate
+    }
     // pretty-print the Alert as an XML string
     capString := toXML(alert)
 
     // if CAP is not dupe, send it to the database
     if capString != lastMsg {
         go toDatabase(capString, &alert, receivedTime, expiresTime)
-        //log.Println(capString)
-        log.Println("Received", receivedTime)
-        log.Println("Expires", expiresTime)
-        fmt.Println()
+        log.Println("Received", receivedTime, uniqueID)
         lastMsg = capString
     } else {
-        log.Println("ALERT IS DUPLICATE, DISCARDING\n")
+        log.Println("ALERT IS DUPLICATE, DISCARDING")
     }
-    inMessage = false // for packet scanner, go back to listening for next msg
+    inMessage = false // for benefit of packet scanner, go back to listening for next msg
 }
 
 /*****************************************************
@@ -226,8 +254,8 @@ func toDatabase(capString string, alert *cap.Alert, received string, expires str
         log.Print("warn.main Prepare", err.Error())
     }
 	// execute DB statement
-	uniqueId := j.Sender + "," + j.ID + "," + j.Sent
-    if _, err = ps.Exec(capString, string(jsn), zuluSent, zuluExpires, uniqueId); err != nil {
+	uniqueID := j.Sender + "," + j.ID + "," + j.Sent
+    if _, err = ps.Exec(capString, string(jsn), zuluSent, zuluExpires, uniqueID); err != nil {
         log.Print("warn.main Exec", err.Error())
     }
     ps.Close()
@@ -264,4 +292,10 @@ func toXML(alert cap.Alert) string {
     bytes.Trim(cap, "\x00")
     // return indented XML with C18n XML-escaped newlines ("&#xA;") replaced
     return "<?xml version='UTF-8' encoding='UTF-8'?>\n" + replacer.Replace(string(cap))
+}
+
+func check(err error) {
+    if err != nil {
+        log.Print("warnMonitor", err.Error())
+    }
 }
