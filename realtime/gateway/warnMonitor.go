@@ -92,7 +92,7 @@ func messageProcessor(message []byte) {
     receivedTime := time.Now().Format(time.RFC3339)
 
     // update heartbeat to database
-    statement := `update  updated set timestamp = ? where ID = 1`
+    statement := `update  updated set time = ? where ID = 1`
     ps, err := db.Prepare(statement)
     check(err)
     // execute DB statement
