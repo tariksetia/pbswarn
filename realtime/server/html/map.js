@@ -231,7 +231,7 @@ function success(data) {
     var utc = moment().utc();
     j = JSON.parse(data.responseText);
     f = j.alerts;
-    $('#hb_stamp').html("Current to: " + j.heartbeat)
+    $('#hb').html("Updated: " + j.heartbeat)
     console.log(f);
     var i=0, item;
     while(item = f[i++]) {
