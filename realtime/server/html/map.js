@@ -214,6 +214,7 @@ function clearMap() {
 
 // Get the current alerts in JSON from server
 function poll() {
+    //console.log("polling");
     $.ajax({
       url: "alerts.json",
       data: "",
@@ -228,8 +229,11 @@ function success(data) {
     clearMap();
     var now = new Date().toUTCString();
     var utc = moment().utc();
-    f = JSON.parse(data.responseText);
-    var i=0, item
+    j = JSON.parse(data.responseText);
+    f = j.alerts;
+    $('#hb_stamp').html("Current to: " + j.heartbeat)
+    console.log(f);
+    var i=0, item;
     while(item = f[i++]) {
         var then = moment(item['Expires'], "YYYY-MM-DD HH:mm:ss").utc();
         // only plot if not expired
@@ -240,6 +244,7 @@ function success(data) {
 }
 
 $(window).bind('focus', function() {
+    console.log("regained focus");
     poll();
 });
 
