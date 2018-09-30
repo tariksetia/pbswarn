@@ -230,9 +230,10 @@ function success(data) {
     var now = new Date().toUTCString();
     var utc = moment().utc();
     j = JSON.parse(data.responseText);
-    $('#hb').html("Updated: " + j.heartbeat + " PDT")
+    var hb = moment(j.heartbeat).tz("America/New_York");
+    $('#hb').html("Updated: " + hb.format("YYYY-MM-DD HH:mm:ss") + " " + hb.zoneName())
     f = j.alerts;
-    console.log(f);
+    //console.log(f);
     var i=0, item;
     while(item = f[i++]) {
         var then = moment(item['Expires'], "YYYY-MM-DD HH:mm:ss").utc();
