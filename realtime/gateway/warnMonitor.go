@@ -117,7 +117,7 @@ func messageProcessor(message []byte) {
         uniqueID = alert.SenderID + "," + alert.MessageID + "," + alert.SentDate
         for replaces := range alert.ReferenceIDs {
             log.Println(replaces, " replaced by ", uniqueID)
-            statement := `update  alerts set replacedBy = ? where identifer = ?`
+            statement := `update alerts set replacedBy = ? where identifer = ?`
             ps, err := db.Prepare(statement)
             check(err)
             // execute DB statement
