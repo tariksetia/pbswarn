@@ -230,8 +230,8 @@ function success(data) {
     var now = new Date().toUTCString();
     var utc = moment().utc();
     j = JSON.parse(data.responseText);
+    $('#hb').html("Updated: " + j.heartbeat + " PDT")
     f = j.alerts;
-    $('#hb').html("Updated: " + j.heartbeat)
     console.log(f);
     var i=0, item;
     while(item = f[i++]) {
