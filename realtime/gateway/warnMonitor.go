@@ -222,6 +222,7 @@ func toDatabase(capString string, alert *cap.Alert, received string, expires str
     j.Sent = alert.SentDate
     j.Status = alert.MessageStatus
     j.MsgType = alert.MessageType
+    j.ResponseType = info.ResponseType
     j.Cmam = info.Parameter("CMAMtext")
     j.Headline = info.Headline
     j.Source = info.SenderName
