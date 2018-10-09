@@ -126,13 +126,14 @@ func messageProcessor(message []byte) {
             ps.Close()
         }
     }
-    // If no Infos, it must be a cancel, expire it immediately
+    // If no Infos, probably a cancel, expire it immediately
     if len(alert.Infos) == 0 {
         expiresTime = receivedTime
     } else {
         expiresTime = alert.Infos[0].ExpiresDate
     }
-    // pretty-print the Alert as an XML string
+	
+    // format the Alert as a pretty XML string
     capString := toXML(alert)
 
     dupe = false;
@@ -142,13 +143,13 @@ func messageProcessor(message []byte) {
 
     // maintain a FIFO of last five messages
     previous.PushFront(capString)
-    if (previous.Len() > 5) {
+    if (previous.Len() > 15) {
         previous.Remove(previous.Back())
     } 
 
     // if CAP is not dupe, send it to the database
     if dupe {
-        log.Println("ALERT IS DUPLICATE, DISCARDING")
+        log.Println("ALERT IS DUPLICATE, DISREGARDING")
     } else {
         go toDatabase(capString, &alert, receivedTime, expiresTime)
         log.Println("Received", receivedTime, uniqueID)
