@@ -5,6 +5,7 @@ import (
     "database/sql"
     "encoding/json"
     "encoding/xml"
+    "container/list"
     "hash"
     "log"
     "pbs/warn/catcher"
@@ -18,7 +19,8 @@ import (
 )
 
 var (
-    inMessage bool
+    inMessage   bool
+    dupe       bool
     message   []byte
     breaker   []byte
     lastMsg   string
@@ -30,6 +32,7 @@ var (
     rows      *sql.Rows
     dispPoly  string
     warnChannel   chan []byte
+    previous = list.New()
 )
 
 const (
@@ -89,21 +92,18 @@ func messageProcessor(message []byte) {
     // take out any nulls, esp at start
     bytes.Trim(message, "\x00")
 
-    receivedTime := time.Now().Format(time.RFC3339)
-
-    // update heartbeat to database
-    statement := `update  updated set time = ? where ID = 1`
+    // update last link-activity time to database
+    receivedTime := time.Now().UTC().Format(time.RFC3339)
+    statement := `update updated set time = ? where ID = 1`
     ps, err := db.Prepare(statement)
     check(err)
+    defer ps.Close()
     // execute DB statement
     _, err = ps.Exec(receivedTime)
     check (err)
-    ps.Close()
 
     // if heartbeat message, do no more
     if bytes.Equal([]byte("heartbeat"), message) {
-        hbTime := time.Now().UTC().Format(time.RFC822)
-        fmt.Println("Heartbeat: ", hbTime)
         return
     }
 
@@ -135,13 +135,24 @@ func messageProcessor(message []byte) {
     // pretty-print the Alert as an XML string
     capString := toXML(alert)
 
+    dupe = false;
+    for e := previous.Front(); e != nil; e = e.Next() {
+         if (e.Value == capString) {dupe = true;}
+    }
+
+    // maintain a FIFO of last five messages
+    previous.PushFront(capString)
+    if (previous.Len() > 5) {
+        previous.Remove(previous.Back())
+    } 
+
     // if CAP is not dupe, send it to the database
-    if capString != lastMsg {
+    if dupe {
+        log.Println("ALERT IS DUPLICATE, DISCARDING")
+    } else {
         go toDatabase(capString, &alert, receivedTime, expiresTime)
         log.Println("Received", receivedTime, uniqueID)
         lastMsg = capString
-    } else {
-        log.Println("ALERT IS DUPLICATE, DISCARDING")
     }
     inMessage = false // for benefit of packet scanner, go back to listening for next msg
 }
@@ -161,7 +172,7 @@ func toDatabase(capString string, alert *cap.Alert, received string, expires str
             info = &alert.Infos[0]
             area = &info.Areas[0]
         } else {
-            log.Println("INVALID ALERT REJECTED")
+            log.Println("INVALID ALERT IGNORED")
             return
         }
 
@@ -187,8 +198,6 @@ func toDatabase(capString string, alert *cap.Alert, received string, expires str
         //geocodes = nil
         //geocodes = append(geocodes, "000000")
 
-        fmt.Println("No polygon... geocodes: " + strings.Join(geocodes, ", "))
-
         // look up polygons and add to alert
 
         var polygon string
@@ -210,7 +219,6 @@ func toDatabase(capString string, alert *cap.Alert, received string, expires str
                 }
             }
         }
-        fmt.Println("Replacement polys: " + string(len(dispPoly)))
     } else {
         dispPoly = append(dispPoly, poly)
     }
