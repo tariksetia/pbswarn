@@ -23,7 +23,7 @@ var (
     dupe       bool
     message   []byte
     breaker   []byte
-    lastMsg   string
+   // lastMsg   string
     replacer  strings.Replacer
     h         hash.Hash
     db        *sql.DB
@@ -38,6 +38,7 @@ var (
 const (
     defaultMulticastAddress = "224.3.0.1:5000"
     dsn                     = "warn:warn@tcp(192.168.2.1:3306)/warn"
+    dedupe = 20 // number of previous messages retained for look-back when filtering out duplicates
 )
 
 type mapItem struct {
@@ -112,9 +113,9 @@ func messageProcessor(message []byte) {
     var uniqueID string
     var expiresTime string
     alert = parseAlert(message)
+    uniqueID = alert.SenderID + "," + alert.MessageID + "," + alert.SentDate
     // if cancel or update, mark referenced earlier message in DB
     if alert.MessageType == "Cancel" {
-        uniqueID = alert.SenderID + "," + alert.MessageID + "," + alert.SentDate
         for replaces := range alert.ReferenceIDs {
             log.Println(replaces, " replaced by ", uniqueID)
             statement := `update alerts set replacedBy = ? where identifer = ?`
@@ -126,34 +127,35 @@ func messageProcessor(message []byte) {
             ps.Close()
         }
     }
-    // If no Infos, probably a cancel, expire it immediately
+    // If no Infos, it's probably a cancel, expire it immediately for display purposes
     if len(alert.Infos) == 0 {
         expiresTime = receivedTime
     } else {
         expiresTime = alert.Infos[0].ExpiresDate
     }
-	
-    // format the Alert as a pretty XML string
+
+    // pretty-print the Alert as an XML string
     capString := toXML(alert)
 
+    // test if message is a duplicate of one recently received
     dupe = false;
     for e := previous.Front(); e != nil; e = e.Next() {
          if (e.Value == capString) {dupe = true;}
     }
 
-    // maintain a FIFO of last five messages
-    previous.PushFront(capString)
-    if (previous.Len() > 15) {
-        previous.Remove(previous.Back())
-    } 
-
-    // if CAP is not dupe, send it to the database
+    // Ignore dupes, process out the rest
     if dupe {
-        log.Println("ALERT IS DUPLICATE, DISREGARDING")
+        log.Println("DUPLICATE discarded")
     } else {
+        // maintain a FIFO of last n=dedupe messages in linked list 'previous'
+        previous.PushFront(capString)
+        if (previous.Len() > dedupe) {
+            previous.Remove(previous.Back())
+        } 
+
+        // send it to the database
         go toDatabase(capString, &alert, receivedTime, expiresTime)
-        log.Println("Received", receivedTime, uniqueID)
-        lastMsg = capString
+        log.Println("Received", uniqueID)
     }
     inMessage = false // for benefit of packet scanner, go back to listening for next msg
 }
@@ -169,18 +171,11 @@ func toDatabase(capString string, alert *cap.Alert, received string, expires str
     var area *cap.Area
 
     if &alert.Infos != nil {
-        if &alert.Infos[0].Areas != nil {
-            info = &alert.Infos[0]
+        info = &alert.Infos[0]
+        if info.Areas != nil {
             area = &info.Areas[0]
-        } else {
-            log.Println("INVALID ALERT IGNORED")
-            return
-        }
-
-    } else {
-        fmt.Println("Alert has no Infos")
-        return
-    }
+        } 
+    } 
 
     // check for explicit polygon
     poly := area.Polygon
@@ -231,22 +226,25 @@ func toDatabase(capString string, alert *cap.Alert, received string, expires str
     j.Sent = alert.SentDate
     j.Status = alert.MessageStatus
     j.MsgType = alert.MessageType
-    j.ResponseType = info.ResponseType
-    j.Cmam = info.Parameter("CMAMtext")
-    j.Headline = info.Headline
-    j.Source = info.SenderName
-    j.Levels = info.Urgency + " / " + info.Severity + " / " + info.Certainty
-    j.Description = info.EventDescription
-    j.Instruction = info.Instruction
-    j.Expires = info.ExpiresDate
-    j.AreaDesc = area.Description
-    j.Geocodes = area.GeocodeAll("SAME")
-    j.Polygons = dispPoly
-
+    if info != nil {
+        j.ResponseType = info.ResponseType
+        j.Cmam = info.Parameter("CMAMtext")
+        j.Headline = info.Headline
+        j.Source = info.SenderName
+        j.Levels = info.Urgency + " / " + info.Severity + " / " + info.Certainty
+        j.Description = info.EventDescription
+        j.Instruction = info.Instruction
+        j.Expires = info.ExpiresDate
+        if area != nil {
+            j.AreaDesc = area.Description
+            j.Geocodes = area.GeocodeAll("SAME")
+            j.Polygons = dispPoly
+        }
+    }
     // serialize struct as JSON to go to database
     var jsn []byte
     if jsn, err = json.Marshal(j); err != nil {
-        log.Print("json.Marshal", err)
+        log.Print("json.Marshal", err.Error())
     }
 
     // convert received and expires times to GMT in suitable format for DB
