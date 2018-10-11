@@ -11,7 +11,6 @@ import (
     "pbs/warn/catcher"
     "strings"
     "time"
-    "fmt"
 
     // mysql driver
     _ "github.com/go-sql-driver/mysql"
@@ -23,7 +22,6 @@ var (
     dupe       bool
     message   []byte
     breaker   []byte
-   // lastMsg   string
     replacer  strings.Replacer
     h         hash.Hash
     db        *sql.DB
@@ -39,6 +37,7 @@ const (
     defaultMulticastAddress = "224.3.0.1:5000"
     dsn                     = "warn:warn@tcp(192.168.2.1:3306)/warn"
     dedupe = 20 // number of previous messages retained for look-back when filtering out duplicates
+    dupeFile = "/home/pbs/.recent.alerts"
 )
 
 type mapItem struct {
@@ -118,7 +117,7 @@ func messageProcessor(message []byte) {
     if alert.MessageType == "Cancel" {
         for replaces := range alert.ReferenceIDs {
             log.Println(replaces, " replaced by ", uniqueID)
-            statement := `update alerts set replacedBy = ? where identifer = ?`
+            statement := `update alerts set replacedBy = ? where identifier = ?`
             ps, err := db.Prepare(statement)
             check(err)
             // execute DB statement
@@ -137,25 +136,19 @@ func messageProcessor(message []byte) {
     // pretty-print the Alert as an XML string
     capString := toXML(alert)
 
-    // test if message is a duplicate of one recently received
-    dupe = false;
-    for e := previous.Front(); e != nil; e = e.Next() {
-         if (e.Value == capString) {dupe = true;}
-    }
-
-    // Ignore dupes, process out the rest
-    if dupe {
-        log.Println("DUPLICATE discarded")
+    // skip if message is a duplicate of one recently received
+    rows, err = db.Query("select identifier from alerts where identifier = \"" + uniqueID + "\"")
+    defer rows.Close()
+    if err != nil {
+        log.Print("Db.Query() failed : ", err)
     } else {
-        // maintain a FIFO of last n=dedupe messages in linked list 'previous'
-        previous.PushFront(capString)
-        if (previous.Len() > dedupe) {
-            previous.Remove(previous.Back())
-        } 
-
-        // send it to the database
-        go toDatabase(capString, &alert, receivedTime, expiresTime)
-        log.Println("Received", uniqueID)
+        if rows.Next() {
+            log.Println("DUPLICATE")
+        } else {
+            // send it to the database
+            go toDatabase(capString, &alert, receivedTime, expiresTime)
+            log.Println(alert.MessageStatus, alert.MessageType, alert.MessageID)
+        }
     }
     inMessage = false // for benefit of packet scanner, go back to listening for next msg
 }
@@ -167,18 +160,25 @@ func messageProcessor(message []byte) {
 // then stores raw XML and JSON to table Alerts
 func toDatabase(capString string, alert *cap.Alert, received string, expires string) {
 
+    var infos []cap.Info
     var info *cap.Info
     var area *cap.Area
 
     if &alert.Infos != nil {
-        info = &alert.Infos[0]
-        if info.Areas != nil {
-            area = &info.Areas[0]
-        } 
+        infos = alert.Infos
+        if (len(infos) > 0) {
+            info = &alert.Infos[0]
+            if len(info.Areas) > 0 {
+                area = &info.Areas[0]
+            } 
+        }
     } 
 
-    // check for explicit polygon
-    poly := area.Polygon
+    // check for explicit polygon in CAP message
+    var poly = ""
+    if len(area.Polygon) > 0 {
+        poly = area.Polygon
+    }
 
     // FOR TEST
     //poly = ""
@@ -198,7 +198,6 @@ func toDatabase(capString string, alert *cap.Alert, received string, expires str
 
         var polygon string
         for _, gcode := range geocodes { // for each geocode in Areas[0]
-            fmt.Println("Getting poly for " + gcode)
             rows, err = db.Query("select polygon from fips where samecode=?", gcode)
             defer rows.Close()
             if err != nil {
