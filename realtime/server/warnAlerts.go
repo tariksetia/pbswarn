@@ -19,7 +19,7 @@ func main() {
 	check(err)
 	defer db.Close()
 	//statement, err = db.Prepare("select json from warn.alerts where expires > now()")
-	statement, err = db.Prepare("select json from alerts where (unix_timestamp(expires) > unix_timestamp(utc_timestamp())) and replacedBy is null")
+	statement, err = db.Prepare("select json from alerts where (unix_timestamp(expires) > unix_timestamp(utc_timestamp())) and replacedBy is null order by received desc")
 	statement2, err = db.Prepare("select time from warn.updated where ID = 1")
 	check(err)
 	for {
