@@ -6,9 +6,14 @@
 img/  
   WARN-Logo-Blk-PBS-Web-Sized.png
   wea_icon.png
+  
+images/ # required by dataTables
+  sort_asc.png
+  sort_both.png
 
 css/
   map.css
+  jquery.dataTables.css
 
 font/
   Roboto-Regular.ttf
