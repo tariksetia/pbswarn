@@ -17,6 +17,7 @@ css/
 
 font/
   Roboto-Regular.ttf
+  Roboto-Bold.ttf
 
 js/
   map.js
