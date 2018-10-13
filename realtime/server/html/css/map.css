@@ -1,0 +1,286 @@
+@font-face { 
+    font-family: Roboto; 
+    font-weight: regular; 
+    src: url('../font/Roboto-Regular.ttf');
+}
+
+@font-face { 
+    font-family: Roboto; 
+    font-weight: bold; 
+    src: url('../font/Roboto-Bold.ttf');
+}
+
+.button {
+    font-family:"Roboto","Trebuchet MS",sans-serif;
+}
+
+body {
+    background-color: #444;
+}
+
+#logo {
+    position: absolute;
+    bottom:5px;
+    left: 5px;
+    z-index:1000;
+    opacity: 0.9;
+}
+
+#map {
+    height: 95vh;
+    width: 98vw;
+    margin: 5px;
+    padding: 0;
+}
+
+#about_display {
+  margin-top: 20px;
+}
+
+.my-div-icon {
+    height:12px;
+    color: #ff9;
+    vertical-align:super;
+    text-shadow: 1px 1px 2px #000000;
+    font-family:"Roboto","Trebuchet MS",sans-serif;
+    font-size: 7pt;
+    font-weight: bold;
+    background: #777;
+    margin-left:8px;
+    margin-top:-19px;
+    padding-top:-2px;
+    padding-left:2px;
+    padding-right:2px;
+    padding-bottom:2px;
+}
+
+#hb {
+    position: absolute;
+    top:17px;
+    left: 120px;
+    height: 17px;
+    padding-left: 13px;
+    padding-right: 13px;
+    padding-top: 5px;
+    padding-bottom: 0px;
+    z-index:1000;
+    background: rgba(0,0,0,0.4);
+    color: #fff;
+    text-shadow: 1px 1px 0px #000000;
+    font-family:"Roboto","Trebuchet MS",sans-serif;
+    font-size:7pt;
+}
+
+#reset_view {
+    position: absolute;
+    top:95px;
+    left: 20px;
+    z-index:1005;
+    cursor: pointer;
+}
+
+#set_default {
+    position: absolute;
+    top:125px;
+    left: 20px;
+    z-index:1005;
+    cursor: pointer;
+}
+
+#about_panel {
+  background: #fff;
+  box-shadow: 0 0 5px rgba(207,207,207,0.7);
+  color: #333;
+  position: absolute;
+  top: 60px;
+  right: 60px;
+  width: 500px;
+  max - height:350px;
+  z-index:5000;
+  display: none;
+}
+
+#about_text {
+  display:block;
+  margin-bottom: 6px;
+  margin-left:15px;
+  margin-right:15px;
+  width: 480px;
+  font-family:"Roboto","Trebuchet MS",sans-serif;
+  font-size:10pt;
+}
+
+#aboutBtn {
+    position:absolute;
+    top:15px;
+    right:30px;
+    z-index:5005;
+    cursor: pointer;
+}
+
+#scrollBtn {
+    position:absolute;
+    top: 155px;
+    left:20px;
+    z-index:1005;
+    cursor: pointer;
+}
+
+#msgId {
+    position:absolute;
+    top: 0px;
+    width:100%;
+    padding: 5px;
+    text-align:center;
+    font-size: 8pt;
+    font-family:"Roboto","Trebuchet MS",sans-serif;
+    background: rgba(0,0,0,0.2);
+    color: #fff;
+    text-shadow: 1px 1px 0px #000000;
+    z-index:1020;
+}
+
+#tableBtn {
+    position:absolute;
+    top: 185px;
+    left:20px;
+    z-index:1005;
+    cursor: pointer;
+}
+
+#console_bg {
+    position:absolute;
+    top:0px;
+    left: 0px;
+    width: 36%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1010;
+    pointer-events:none;
+    display:none;
+    overflow: hidden;
+}
+
+#console_window {
+    position:absolute;
+    margin-top:23px;
+    margin-bottom: 20px;
+    margin-left: 15px;
+    margin-right: 15px;
+    height: 95%;
+    width: 90%;
+    z-index: 1012;
+    overflow: hidden;
+}
+
+#console_text {
+    position:absolute;
+    display: block;
+    z-index: 1014;
+    color: #ffe;
+    text-shadow: 1px 1px 0px #000000;
+    font-family:"Roboto","Trebuchet MS",sans-serif;
+    font-size:12pt;
+}
+
+#table_window {
+    position:absolute;
+    background-color: rgba(0,0,0,0.1);
+    right: 0px;
+    width: 60%;
+    max-height: 115%;
+    bottom: -60px;
+    margin: 0px;
+    padding: 0px;
+    border: 0;
+    z-index: 2010;
+    overflow-y: auto;
+    color: #fff;
+    text-shadow: 1px 1px 0px #000000;
+    font-family:"Roboto","Trebuchet MS",sans-serif;
+    font-size:8pt;
+    pointer-events:all;
+    display: none;
+}
+
+#table_display {
+    position:absolute;
+    top:0px;
+    left: 0px;
+    width: 36%;
+    bottom:30px;
+    padding: 10px;
+    background: rgba(0,0,0,0.5);
+    z-index: 1010;
+    pointer-events:none;
+    display:none;
+    color: #ffe;
+    text-shadow: 1px 1px 0px #000000;
+    font-family:"Roboto","Trebuchet MS",sans-serif;
+    font-size:12pt;
+    z-index: 2010;
+    overflow-y: auto;
+    pointer-events:all;
+    display: none;
+}
+
+#frame {
+    background-color: transparent;
+    position:absolute;
+    top: 60px;
+    left: 120px;
+    right: 60px;
+    bottom: 110px;
+    display: block;
+    z-index: 4010;
+    pointer-events:none;
+}
+
+table.dataTable.display, table.dataTable.order-column.stripe {
+    border-spacing: 4px;
+    border-style: none;
+    border-collor: transparent;
+    border-collapse: separate;
+}
+
+table.dataTable.display tbody tr.odd > .sorting_1, table.dataTable.order-column.stripe tbody tr.odd > .sorting_1 {
+    background-color: transparent;
+}
+table.dataTable.display tbody tr.even > .sorting_1, table.dataTable.order-column.stripe tbody tr.even > .sorting_1 {
+    background-color: transparent;
+}
+
+table.dataTable.stripe tbody tr.odd, table.dataTable.display tbody tr.odd {
+    //background-color: rgba(0,0,0,0.5);
+    background-color: transparent;
+}
+table.dataTable.stripe tbody tr.even, table.dataTable.display tbody tr.even {
+    //background-color: rgba(0,0,0,0.5);
+    background-color: transparent;
+}
+
+table.dataTable.stripe tbody tr.odd, table.dataTable.display tbody tr.odd td {
+    padding:4px;
+    background-color: rgba(0,0,0,0.5);
+    //background-color: transparent;
+    color: #ffe;
+    text-shadow: 1px 1px 0px #000000;
+    font-family: "Roboto","Trebuchet MS",sans-serif;
+    font-size: 9pt;
+    cursor: pointer;
+}
+table.dataTable.stripe tbody tr.even, table.dataTable.display tbody tr.even td {
+    padding:4px;
+    background-color: rgba(0,0,0,0.5);
+    //background-color: transparent;
+    color: #ffe;
+    text-shadow: 1px 1px 0px #000000;
+    font-family: "Roboto","Trebuchet MS",sans-serif;
+    font-size: 9pt;
+    cursor: pointer;
+}
+
+.dataTables_wrapper table thead {
+    display:none; // suppress column headers
+}
+
