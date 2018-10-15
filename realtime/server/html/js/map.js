@@ -1,7 +1,24 @@
+/**************************************************************
+ *
+ *  Copyright (c) 2018 Public Broadcasting Service 
+ *  Contact: <warn@pbs.org>
+ *  All Rights Reserved.
+ * 
+ *  Version 1.7 10/14/2018
+ *
+ *************************************************************/
+
 var alerts;
+var loaded = false;
+
+var extreme = "#f99";
+var severe = "#ff9";
+var moderate = "#8ff";
+var minor = "#9f9";
+var unknown = "#fff";
 
 //////////////////////////////////////////////////////
-// Printer Viewer
+// Scroll Viewer
 //////////////////////////////////////////////////////
 
 var tt_running = false;
@@ -15,95 +32,61 @@ var consoleWindow = document.getElementById('console_window');
 var consoleText = document.getElementById('console_text');
 var tableBG = document.getElementById('table_window');
 var tableDisp = document.getElementById('table_display');
+var displayWindow;
+
+function hideScroll() {
+    consoleBG.style.display = "none";
+    $('#scrollBtn').html('Scroll');
+    haltTT();
+}
+
+function showScroll() {
+    consoleBG.style.display = "block";
+    tableDisp.style.display = "none";
+    $('#scrollBtn').html('Hide Scroll');
+    
+}
+
+function isLoaded() {
+    if (typeof(alerts) != "undefined") { return true; } 
+    return false;
+}
 
 // button click to show/hide the console
 $('#scrollBtn').click(function(){
   if (consoleBG.style.display == "block") {
-      consoleBG.style.display = "none";
-      $('#scrollBtn').html('Scroll');
-      haltTT();
+      hideScroll();
   } else {
-      consoleBG.style.display = "block";
-      tableDisp.style.display = "none";
-      $('#scrollBtn').html('Hide Scroll');
-      runTT(); 
+      showScroll(); 
+      runTT()
   }
 });
 
-// format the alert contents for the console display
-function make_text(item) {
-    var sent = item["Sent"];
-    sent = sent.replace("T"," at ");
-    // Now build the html
-    var text = "";   
-    text = text + '<small>';
-    text = text + item["Source"] + "<br>";
-    text = text + '</small>';
-    text = text + '<font size="-2">';
-    text = text + sent + '<br>';
-    text = text + '</font>';
-    if (item["Headline"]!=null) {
-        text = text + '<h4>' + item["Headline"] + '</h4>';
-    } else {
-        text = text + '<h4>' + item["Cmam"] + '</h4>';
-    }
-    if (item["Status"] == "Test") {
-        text + "TEST MESSAGE: " + text;
-    }
-    if (item["Status"] == "Exercise") {
-        text + "EXERCISE MESSAGE: " + text;
-    }
-    text = text + '<small>';
-    text = text + '<p>' + item["Levels"] + " - " + item["ResponseType"] + "</p>";
-    text = text + '<p>' + "WEA Text: <i>\"" + item["Cmam"] + "\"</i>" + "</p>";
-    text = text + '</small>';
-    
-    text = text + "<p>" + item['Description'] + '</p>';
-    text = text + "<p>" + item['Instruction'] + '</p>';
-    text = text + "<p>Area: " + item['AreaDesc'] + '</p>';
-    text = text + '<small>';
-    text = text + "<p>Expires: " + item['Expires'].replace("T"," ") + '</p>';
-    text = text + '</small>';
-    text = text + '<font size="-2">';
-    text = text + "<p>Ref: " + item['ID'] + '</p>';
-    text = text + '</font>';
-    if (item["Status"] == "Test") {
-        text = text + "TEST MESSAGE";
-    }
-    if (item["Status"] == "Exercise") {
-        text = text + "EXERCISE MESSAGE";
-    }    
-    return text;
-}
-
-function isCurrent(item) {
-    expString = item.Expires;
-    exp = new Date(expString);
-    zExp = new Date(exp.toISOString()).toISOString();
-    now = new Date(new Date().toUTCString().substr(0, 25));
-    if (now > zExp) {
-        return false;
-    } else {
-        return true;
+function updateScroll() { // called when new data arrives
+    // if we're not actively typing, if scroll is visible, restart the scroll engine
+    if (typeof(typed) == "undefined") {
+        messagePointer = 0;
+        if (consoleBG.style.display == "block") {
+            runTT();
+        }
     }
 }
 
-// type the next message in sliding div id="console_text"
+// type the next alert in rotation in sliding div id="console_text"
 function runTT() {
     if (alerts.length > 0) {
-        messagePointer++;
-        if (messagePointer == alerts.length) {
+        if (messagePointer >= alerts.length) {
              messagePointer = 0;
         }
         typeAlert(messagePointer);
+        messagePointer++;
     } else {
-        console.log(alerts);
         $("#msgId").html("No Alerts");
     }
 }
 
-function typeAlert(messagePointer) {  // launches runTT again when complete
-    if (typeof(typed) != "undefined") {
+function typeAlert(messagePointer) {  // launches runTT() again when complete
+    if (typeof(typed) != "undefined") {  // kill any still-running typer
         typed.destroy();
     }
     consoleText.textContent = "";
@@ -125,6 +108,54 @@ function typeAlert(messagePointer) {  // launches runTT again when complete
             2000);
         }
     });
+}
+
+// format the alert contents for the console display
+function make_text(alert) {
+    var sent = alert["Sent"];
+    sent = sent.replace("T"," at ");
+    // Now build the html
+    var text = "";
+    if (alert["Status"] == "Test") {
+        text = "<p>*** TEST MESSAGE ***</p>";
+    } else if (alert["Status"] == "Exercise") {
+        text = "<p>*** EXERCISE MESSAGE ***</p>";
+    }
+    text = text + '<small>' + alert["Source"] + "</small><br>" +
+    "<font size='-2'>" + sent + '</font><br>';
+    if (alert["Headline"]!=null) {
+        text = text + '<h4>' + alert["Headline"] + '</h4>';
+    } else {
+        text = text + '<h4>' + alert["Cmam"] + '</h4>';
+    }
+    text = text + "<small>" +
+        "<p>" + alert["Levels"] + " - " + alert["ResponseType"] + "</p>" +
+        "<p>" + "WEA Text: <i>\"" + alert["Cmam"] + "\"</i>" + "</p>" +
+        '</small>' +
+        "<p>" + alert['Description'] + '</p>' +
+        "<p>" + alert['Instruction'] + '</p>' +
+        "<p>Area: " + alert['AreaDesc'] + '</p>' +
+        "<small><p>Expires: " + alert['Expires'].replace('T',' ') + "</p></small>" +
+        "<font size='-2'><p>Ref: " + alert['ID'] + "</p></font>";
+    if (alert["Status"] == "Test") {
+        text = text + "<p>*** TEST MESSAGE ***</p>";
+    }
+    if (alert["Status"] == "Exercise") {
+        text = text + "<p>*** EXERCISE MESSAGE ***</p>";
+    }    
+    return text;
+}
+
+function isCurrent(item) {  // true if not expired
+    expString = item.Expires;
+    exp = new Date(expString);
+    zExp = new Date(exp.toISOString()).toISOString();
+    now = new Date(new Date().toUTCString().substr(0, 25));
+    if (now > zExp) {
+        return false;
+    } else {
+        return true;
+    }
 }
 
 // interval-driven function to scroll up text as needed
@@ -149,19 +180,30 @@ function haltTT() {
     $("#console_text").css('top',0);
 }
 
+if ( !loaded ) { showScroll(); }
+loaded = true;
+
 //////////////////////////////////////////////////////
 // Tabular Viewer
 //////////////////////////////////////////////////////
 
+function hideList() {
+    tableBG.style.display = "none";
+    tableDisp.style.display = "none";
+    $('#tableBtn').html('List');
+}
+
+function showList() {
+    tableBG.style.display = "block";
+    $('#tableBtn').html('Hide List');
+}
+
 // button click to toggle the table viewer
 $('#tableBtn').click(function(){
     if (tableBG.style.display == "block") {
-        tableBG.style.display = "none";
-        tableDisp.style.display = "none";
-        $('#tableBtn').html('List');
+        hideList()
     } else {
-        tableBG.style.display = "block";
-        $('#tableBtn').html('Hide List');
+        showList()
     }
 });
 
@@ -169,14 +211,8 @@ $('#tableBtn').click(function(){
 var tableLoaded = false;
 var dataTable;
 function updateTable() {
-    fakeAlerts = [
-        {Headline:"Headline", Source: "Source", Sent:"Sent", Expires:"2019-12-31T23:59:00-00:00", Polygons:[]},
-        {Headline:"Headline2", Source: "Source2", Sent:"Sent2", Expires:"2019-12-31T23:59:00-00:00", Polygons:[]},
-        {Headline:"Headline3", Source: "Source3", Sent:"Sent3", Expires:"2019-12-31T23:59:00-00:00", Polygons:[]}
-    ];
-    //alerts = fakeAlerts; // test mode, comment out for normal operation
-    
     if (!tableLoaded) {  // if startup, init dataTable
+        showList(); // visible by default as soon as there's data
         tableLoaded = true;
         dataTable = $('#table').DataTable( {
             data: alerts,
@@ -189,25 +225,28 @@ function updateTable() {
             searching: false,
             order: [],
             columns: [
-                {render: function (data, type, row) {
-                            slug = row.Headline;
-                            if (slug == "") { slug =  row.Cmam; }
-                            if (slug.length > 80) {
-                                slug = slug.substring(0,77) + "...";   
-                            }
-                            snt = row.Sent.replace("T", " at ");
-                            cell = "<div><div><strong>" + slug + "</strong></div>" + 
-                                    "<div><small>From " + row.Source + " on " + snt + 
-                                    "</small></div></div>";
-                            $(row).addClass("alertItem");
-                            return cell
+                { render: function (data, type, row) {
+                        slug = row.Headline;
+                        if (slug == "") { slug =  row.Cmam; }
+                        if (slug.length > 80) {
+                            slug = slug.substring(0,77) + "...";   
                         }
+                        snt = row.Sent.replace("T", " at ");
+                        color = getColor(row);
+                        cell = "<div><div style=\"color:" + color + "\"><strong>" + slug + "</strong></div>" + 
+                            "<div><small>From " + row.Source + " on " + snt + "</small></div></div>";
+                        return cell
+                    }
                 }
             ]
-        } );
+        });
+        // set click handler on table row
         $('#table').on('click', 'tr', function () {
-            var data = dataTable.row( this ).data();
-            display( data);
+            var item = dataTable.row( this ).data();
+            // zoom the map to (aggregate) bounds of the alert's polys
+            focusOn(item);
+            polygons = item.Polygons;
+            display( item );
         } );
     } else {  // existing dataTable, reload latest data
         dataTable.clear();
@@ -216,11 +255,25 @@ function updateTable() {
     }
 }
 
+// get the severity-based color value for an alert
+function getColor(item) {
+    sev = item.Levels.split("/")[1]
+    if (sev.includes("Extreme")) {
+        return extreme;
+    } else if (sev.includes("Severe")) {
+        return severe;
+    } else if (sev.includes("Moderate")) {
+        return moderate;
+    } else if (sev.includes("Minor")) {
+        return minor;
+    } else {
+        return unknown;
+    }
+}
+
 function display(item) {
     // hide the Printer
-    consoleBG.style.display = "none";
-    $('#scrollBtn').html('Scroll');
-    haltTT();
+    hideScroll();
     // and show the selected alert
     tableDisp.style.display = "block";
     $("#table_display").html(make_text(item));
@@ -230,27 +283,50 @@ function tableTextHide() {
     tableDisp.style.display = "none";
 }
 
-
 //////////////////////////////////////////////////////
 // Realtime Map
 //////////////////////////////////////////////////////
 
-// set up the map
+// set up the map, use stored view if any
 var centerLat, centerLon, defaultZoom;
 var map = L.map('map',zoomDelta=0.1).setView([39.833, -98.583], 4.2);
 if (localStorage.defaultBounds) {
     resetView();
 }
 var center;
-var yellow_icon = L.icon({
-    iconUrl: 'img/wea_icon.png',
+// load colored pins for severity indication
+var extremeIcon = L.icon({
+    iconUrl: 'img/extremeIcon.png',
     iconSize: [18,18],
     iconAnchor: [9,18],
     popupAnchor: [18,9]
 });
-var bounds = {};
-var marker_to_polygon = {};
+var severeIcon = L.icon({
+    iconUrl: 'img/severeIcon.png',
+    iconSize: [18,18],
+    iconAnchor: [9,18],
+    popupAnchor: [18,9]
+});
+var moderateIcon = L.icon({
+    iconUrl: 'img/moderateIcon.png',
+    iconSize: [18,18],
+    iconAnchor: [9,18],
+    popupAnchor: [18,9]
+});
+var minorIcon = L.icon({
+    iconUrl: 'img/minorIcon.png',
+    iconSize: [18,18],
+    iconAnchor: [9,18],
+    popupAnchor: [18,9]
+});
+var unknownIcon = L.icon({
+    iconUrl: 'img/unknownIcon.png',
+    iconSize: [18,18],
+    iconAnchor: [9,18],
+    popupAnchor: [18,9]
+});
 
+// add the base map from OSM tile server
 L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
     attribution: 'Map &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors | Wireless Emergency Alerts from PBS WARN @ KVIE, Sacramento\n'
 }).addTo(map);
@@ -258,93 +334,73 @@ L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
 var markerGroup = L.layerGroup().addTo(map);
 var polyGroup = L.layerGroup().addTo(map);
 
-
-// try to retrieve  saved view parameters from LocalStorage
-function resetView(evt) {
-    try {
-        mbdict = JSON.parse(localStorage.defaultBounds);
-        var swLatLng = L.latLng([mbdict["_southWest"]["lat"],mbdict["_southWest"]["lng"]]);
-        var neLatLng = L.latLng([mbdict["_northEast"]["lat"],mbdict["_northEast"]["lng"]]);
-        mbounds = L.latLngBounds(swLatLng, neLatLng);
-        map.fitBounds(mbounds);
-    } catch {}
-}
-
-function setDefaultViewToCurrent(evt) {
-    if (confirm("Set Default to Current View?")) {
-        localStorage.defaultBounds = JSON.stringify(map.getBounds());
-    }
-}
-
-// create a Leaflet LatLngBounds object from a CAP-format (lat,lon lat,lon) string
-function make_bounds(polygon) {
-    var new_poly = [];
-    points = polygon.split(" ");
-    for(var i = 0; i<points.length; i++)  {
-        point = points[i];
-        here = L.latLng(point.split(","));
-        new_poly.push(here)
-    }
-    return L.polygon(new_poly).getBounds()
-}
-
-function plot(item) {
-    var popup = make_text(item);
-    tiptext = item["Cmam"];
+// plot an alert on the map
+function plot(alert) {
+    var popup = make_text(alert);
+    tiptext = alert["Cmam"];
     if (tiptext == '') {
-        tiptext = item['Headline']
+        tiptext = alert['Headline']
     }
-    polygons = item["Polygons"];
+    polygons = alert["Polygons"];
+    color = getColor(alert);
     if (polygons.length > 0) {  // if there's no polygon by now, skip plotting
         for (var i = 0; i<polygons.length; i++) {
-            plot_polygon(polygons[i], popup);
+            plot_polygon(polygons[i], color, alert);
         }
-        var label = item["ResponseType"];
+        var label = alert["ResponseType"];
         if (label == "") {
             label = "Alert";
         }
-        if (item["Status"] == "Test") {
+        if (alert["Status"] == "Test") {
             label = "TEST"   
         }
-        if (item["Status"] == "Exercise") {
+        if (alert["Status"] == "Exercise") {
             label = "EXERCISE"   
         }
-        var myIcon = L.divIcon({className: 'my-div-icon', iconSize: null, html: label});
-        var marker2 = L.marker( center, {icon: myIcon, className:"my-label"}).addTo(map).addTo(markerGroup);
-        
-        marker = L.marker(center, {icon: yellow_icon}).addTo(map).addTo(markerGroup); 
-        var thisPoly = make_bounds(polygons[0]);
-        marker_to_polygon[marker._leaflet_id] = thisPoly;
+        // style icon and label per alert severity
+        sev = alert.Levels.split("/")[1]
+        if (sev.includes("Extreme")) {
+            iClass = "alertIconExtreme";
+            icon = extremeIcon;
+        } else if (sev.includes("Severe")) {
+            iClass = "alertIconSevere";
+            icon = severeIcon;
+        } else if (sev.includes("Moderate")) {
+            iClass = "alertIconModerate";
+            icon = moderateIcon;
+        } else if (sev.includes("Minor")) {
+            iClass = "alertIconMinor";
+            icon = minorIcon;
+        } else {
+            iClass = "alertIconExtreme";
+            icon = "unknownIcon";
+        }
+        var myIcon = L.divIcon({className: iClass, iconSize: null, html: label});
+        var label = L.marker( center, {icon: myIcon}).addTo(map).addTo(markerGroup);
+        marker = L.marker(center, {icon: icon}).addTo(map).addTo(markerGroup); 
         marker.addEventListener("click", function(event) {
-            var bnds = marker_to_polygon[event.target._leaflet_id];
-            map.fitBounds(L.latLngBounds(bnds));
+            display(alert);
+            focusOn(alert);
         })
-        marker_to_polygon[marker2._leaflet_id] = thisPoly;
-        marker2.addEventListener("click", function(event) {
-            var bnds = marker_to_polygon[event.target._leaflet_id];
-            map.fitBounds(L.latLngBounds(bnds));
+        label.addEventListener("click", function(event) {
+            display(alert);
+            focusOn(alert);
         })
         marker.bindTooltip(tiptext);
     }
 }
 
-function center_of_polygons(polygons) {
-    var totLat=0.0, totLon=0.0, count = 0;
-    polygon = polygons[0];
-    if (polygon.length > 2) {polygons = polygon}
-    for (var i = 0; i<polygons.length; i++) {
-        point = polygons[i];
-        totLat = totLat + parseFloat(point[1]);
-        totLon = totLon + parseFloat(point[0]);
-        count++;
-    }   
-    cLat = cLat + (Math.random() - 0.5) * 0.01;
-    cLon = cLon + (Math.random() - 0.5) * 0.01;
-    return L.LatLng([cLat+LatRnd, cLon+LonRnd]);
+// get center point of supplied alert
+function getCenterOf(item) {
+    var bounds = make_bounds(item.Polygons[0]);
+    for (var i=1;i<item.Polygons.length; i++) {
+        bounds.extend( make_bounds(item.Polygons[i]) );
+    }
+   return L.LatLng([bounds.centerLat, bounds.centerLon]);
 }
 
-
-function plot_polygon(polygon, popup) {
+// translate CAP polygon to Leaflet polygon object
+function plot_polygon(polygon, color, alert) {
     new_polygon = []
     var lat, lon
     if (typeof(polygon) == "string") { // if polygon is a new-style string
@@ -366,32 +422,75 @@ function plot_polygon(polygon, popup) {
         }
     }
     thisPoly = L.polygon(new_polygon, {
-                            color:'#ffd700',
-                            fillOpacity: 0.3
-                        }).addTo(map).bindPopup(popup).addTo(polyGroup);
-    try{
-        center = thisPoly.getCenter();
-    } catch(e) {
-        center = center_of_polygons(thisPoly);
-    }
+                            color: color,
+                            fillOpacity: 0.4,
+                            opacity: 0.8,
+                        }).addTo(map).addTo(polyGroup);
+    thisPoly.on("click", function(event) { display(alert); })
+    center = thisPoly.getCenter();  // coordinates for icon
     return thisPoly;
 }
-
-function bounds_of_polygons(polygons) {
-    var polygon = polygons[0]
-    thisPoly = L.polygon(polygon);
-    return thisPoly.getBounds();
+ 
+// create a Leaflet LatLngBounds object from a CAP-format (lat,lon lat,lon...) polygon string
+function getBounds(polygon) {
+    var new_poly = [];
+    points = polygon.split(" ");
+    for(var i = 0; i<points.length; i++)  {
+        point = points[i];
+        here = L.latLng(point.split(","));
+        new_poly.push(here)
+    }
+    return L.polygon(new_poly).getBounds()
 }
 
+// zoom the map to the bounds of the supplied JSON alert 
+function focusOn(item) {
+    var bounds = getBounds(item.Polygons[0]);
+    for (var i=1;i<item.Polygons.length; i++) {
+        bounds.extend( getBounds(item.Polygons[i]) );
+    }
+    map.fitBounds(bounds.pad(0.3));  
+}
+
+// clear the map
 function clearMap() {
     markerGroup.clearLayers();
     polyGroup.clearLayers();
 }
     
 //////////////////////////////////////////////////////
-// Data Feed
+// Local Storage
 //////////////////////////////////////////////////////
-    
+// try to retrieve  saved view parameters from LocalStorage
+function resetView(evt) {
+    try {
+        mbdict = JSON.parse(localStorage.defaultBounds);
+        var swLatLng = L.latLng([mbdict["_southWest"]["lat"],mbdict["_southWest"]["lng"]]);
+        var neLatLng = L.latLng([mbdict["_northEast"]["lat"],mbdict["_northEast"]["lng"]]);
+        mbounds = L.latLngBounds(swLatLng, neLatLng);
+        map.fitBounds(mbounds);
+    } catch {}
+}
+
+function setDefaultViewToCurrent() {
+    $.confirm({
+        title: '',
+        backgroundDismiss: true,
+        content: 'Save current map view as default?',
+        boxWidth: '15%',
+        useBootstrap: false,
+        buttons: {
+            Yes: function () {
+                localStorage.defaultBounds = JSON.stringify(map.getBounds());
+            },
+            No: function () { },
+        }
+    });
+}
+
+//////////////////////////////////////////////////////
+// Data Feed from server
+//////////////////////////////////////////////////////
 function poll() {
     try {
     $.ajax({
@@ -407,6 +506,7 @@ function poll() {
     }
 }
 
+// handle arrival of new JSON data from server
 function success(data) {
     clearMap();
     try {
@@ -416,27 +516,24 @@ function success(data) {
     }
     $('#hb').html("Link up " + moment(j.heartbeat).format("YYYY-MM-DD HH:mm:ss") + " UTC");
     alerts = j.alerts;
-    
-    // tell dataTable to update
+    // tell dataTable and scroller to update (from global 'alerts' object)
     updateTable(); 
-
+    updateScroll();
     var i=0, item;
     while(item = alerts[i++]) {
         if (isCurrent(item)) {  
             plot(item);
-        } else {
-            console.log("Skipping expired ", item.ID);
-            console.log(item);
         } 
     }
 }
 
+// initial poll and set up interval
+$(document).ready(function () {
+    poll();
+    setInterval(poll, 10000);
+});
+
+// when map regains screen focus, poll the alerts data immediately
 $(window).bind('focus', function() {
     poll();
 });
-
-$(document).ready(function () {
-    setInterval(poll, 10000);
-    poll();
-});
-
