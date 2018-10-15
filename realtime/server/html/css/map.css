@@ -1,3 +1,13 @@
+/**************************************************************
+ *
+ *  Copyright (c) 2018 Public Broadcasting Service 
+ *  Contact: <warn@pbs.org>
+ *  All Rights Reserved.
+ * 
+ *  Version 1.7 10/14/2018
+ *
+ *************************************************************/
+
 @font-face { 
     font-family: Roboto; 
     font-weight: regular; 
@@ -27,17 +37,30 @@ body {
 }
 
 #map {
-    height: 97vh;
+    height: 95vh;
     width: 98vw;
     margin: 5px;
     padding: 0;
 }
 
-#about_display {
-  margin-top: 20px;
+.alertIconExtreme {
+    height:12px;
+    color: #f99;
+    vertical-align:super;
+    text-shadow: 1px 1px 2px #000000;
+    font-family:"Roboto","Trebuchet MS",sans-serif;
+    font-size: 7pt;
+    font-weight: bold;
+    background: #777;
+    margin-left:8px;
+    margin-top:-18px;
+    padding-top:-23px;
+    padding-left:2px;
+    padding-right:2px;
+    padding-bottom:1px;
 }
 
-.my-div-icon {
+.alertIconSevere{
     height:12px;
     color: #ff9;
     vertical-align:super;
@@ -47,11 +70,62 @@ body {
     font-weight: bold;
     background: #777;
     margin-left:8px;
-    margin-top:-19px;
-    padding-top:-2px;
+    margin-top:-18px;
+    padding-top:-23px;
     padding-left:2px;
     padding-right:2px;
-    padding-bottom:2px;
+    padding-bottom:1px;
+}
+
+.alertIconModerate{
+    height:12px;
+    color: #8ff;
+    vertical-align:super;
+    text-shadow: 1px 1px 2px #000000;
+    font-family:"Roboto","Trebuchet MS",sans-serif;
+    font-size: 7pt;
+    font-weight: bold;
+    background: #777;
+    margin-left:8px;
+    margin-top:-18px;
+    padding-top:-23px;
+    padding-left:2px;
+    padding-right:2px;
+    padding-bottom:1px;
+}
+
+.alertIconMinor{
+    height:12px;
+    color: #9f9;
+    vertical-align:super;
+    text-shadow: 1px 1px 2px #000000;
+    font-family:"Roboto","Trebuchet MS",sans-serif;
+    font-size: 7pt;
+    font-weight: bold;
+    background: #777;
+    margin-left:8px;
+    margin-top:-18px;
+    padding-top:-23px;
+    padding-left:2px;
+    padding-right:2px;
+    padding-bottom:1px;
+}
+
+.alertIconUnknown{
+    height:12px;
+    color: #fff;
+    vertical-align:super;
+    text-shadow: 1px 1px 2px #000000;
+    font-family:"Roboto","Trebuchet MS",sans-serif;
+    font-size: 7pt;
+    font-weight: bold;
+    background: #777;
+    margin-left:8px;
+    margin-top:-18px;
+    padding-top:-23px;
+    padding-left:2px;
+    padding-right:2px;
+    padding-bottom:1px;
 }
 
 #hb {
@@ -87,6 +161,30 @@ body {
     cursor: pointer;
 }
 
+#scrollBtn {
+    position:absolute;
+    top: 155px;
+    left:20px;
+    z-index:1005;
+    cursor: pointer;
+}
+
+#tableBtn {
+    position:absolute;
+    top: 185px;
+    left:20px;
+    z-index:1005;
+    cursor: pointer;
+}
+
+#aboutBtn {
+    position:absolute;
+    top:15px;
+    right:30px;
+    z-index:5005;
+    cursor: pointer;
+}
+
 #about_panel {
   background: #fff;
   box-shadow: 0 0 5px rgba(207,207,207,0.7);
@@ -95,7 +193,7 @@ body {
   top: 60px;
   right: 60px;
   width: 500px;
-  max - height:350px;
+  max-height:350px;
   z-index:5000;
   display: none;
 }
@@ -110,20 +208,17 @@ body {
   font-size:10pt;
 }
 
-#aboutBtn {
+#console_bg {
     position:absolute;
-    top:15px;
-    right:30px;
-    z-index:5005;
-    cursor: pointer;
-}
-
-#scrollBtn {
-    position:absolute;
-    top: 155px;
-    left:20px;
-    z-index:1005;
-    cursor: pointer;
+    top:0px;
+    left: 0px;
+    width: 36%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1010;
+    pointer-events:none;
+    display:none;
+    overflow: hidden;
 }
 
 #msgId {
@@ -138,27 +233,6 @@ body {
     color: #fff;
     text-shadow: 1px 1px 0px #000000;
     z-index:1020;
-}
-
-#tableBtn {
-    position:absolute;
-    top: 185px;
-    left:20px;
-    z-index:1005;
-    cursor: pointer;
-}
-
-#console_bg {
-    position:absolute;
-    top:0px;
-    left: 0px;
-    width: 36%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 1010;
-    pointer-events:none;
-    display:none;
-    overflow: hidden;
 }
 
 #console_window {
@@ -177,7 +251,7 @@ body {
     position:absolute;
     display: block;
     z-index: 1014;
-    color: #ffe;
+    color: #fff; 
     text-shadow: 1px 1px 0px #000000;
     font-family:"Roboto","Trebuchet MS",sans-serif;
     font-size:12pt;
@@ -187,8 +261,8 @@ body {
     position:absolute;
     background-color: rgba(0,0,0,0.1);
     right: 0px;
-    width: 60%;
-    max-height: 115%;
+    max-width: 60%;
+    max-height: 60%;
     bottom: -60px;
     margin: 0px;
     padding: 0px;
@@ -210,11 +284,11 @@ body {
     width: 36%;
     bottom:30px;
     padding: 10px;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.55);
     z-index: 1010;
     pointer-events:none;
     display:none;
-    color: #ffe;
+    color: #fff;
     text-shadow: 1px 1px 0px #000000;
     font-family:"Roboto","Trebuchet MS",sans-serif;
     font-size:12pt;
@@ -239,7 +313,7 @@ body {
 table.dataTable.display, table.dataTable.order-column.stripe {
     border-spacing: 4px;
     border-style: none;
-    border-collor: transparent;
+    border-color: transparent;
     border-collapse: separate;
 }
 
@@ -251,19 +325,18 @@ table.dataTable.display tbody tr.even > .sorting_1, table.dataTable.order-column
 }
 
 table.dataTable.stripe tbody tr.odd, table.dataTable.display tbody tr.odd {
-    //background-color: rgba(0,0,0,0.5);
+
     background-color: transparent;
 }
 table.dataTable.stripe tbody tr.even, table.dataTable.display tbody tr.even {
-    //background-color: rgba(0,0,0,0.5);
+
     background-color: transparent;
 }
 
 table.dataTable.stripe tbody tr.odd, table.dataTable.display tbody tr.odd td {
     padding:4px;
-    background-color: rgba(0,0,0,0.5);
-    //background-color: transparent;
-    color: #ffe;
+    background-color: rgba(0,0,0,0.45);
+    color: #fff;
     text-shadow: 1px 1px 0px #000000;
     font-family: "Roboto","Trebuchet MS",sans-serif;
     font-size: 9pt;
@@ -271,9 +344,8 @@ table.dataTable.stripe tbody tr.odd, table.dataTable.display tbody tr.odd td {
 }
 table.dataTable.stripe tbody tr.even, table.dataTable.display tbody tr.even td {
     padding:4px;
-    background-color: rgba(0,0,0,0.5);
-    //background-color: transparent;
-    color: #ffe;
+    background-color: rgba(0,0,0,0.45);
+    color: #fff;
     text-shadow: 1px 1px 0px #000000;
     font-family: "Roboto","Trebuchet MS",sans-serif;
     font-size: 9pt;
@@ -281,6 +353,18 @@ table.dataTable.stripe tbody tr.even, table.dataTable.display tbody tr.even td {
 }
 
 .dataTables_wrapper table thead {
-    display:none; // suppress column headers
+    display:none;
 }
 
+.extreme {
+    color:red;
+}
+
+.severe {
+    color:yellow;
+}
+
+.jconfirm-box  {
+    font-family:"Roboto-Bold","Trebuchet MS",sans-serif;
+    font-size: 12pt;
+}
