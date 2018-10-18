@@ -4,18 +4,18 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.10 10/18/2018
+ *  Version 1.9 10/16/2018
  *
  *************************************************************/
 
 var alerts;
 var loaded = false;
 
-var extreme = "#f99";
+var extreme = "#ff9999";
 var severe = "#f2e765"; // "#ff9";
-var moderate = "#8ff";
-var minor = "#9f9";
-var unknown = "#fff";
+var moderate = "#88ffff";
+var minor = "#99ff99";
+var unknown = "#ffffff";
 
 String.prototype.replaceAll = function(search, replacement) {
     return String.prototype.replace(new RegExp(search, 'g'), replacement);
@@ -64,7 +64,7 @@ $('#scrollBtn').click(function(){
       showScroll()
       runTT()
   }
-});
+})
 
 function updateScroll() { // called when new data arrives
     // if we're not actively typing, if scroll is visible, restart the scroll
@@ -101,7 +101,8 @@ function typeAlert(alert) {  // launches runTT() again when complete
     }
     consoleText.textContent = ""
     $("#msgId").html("Alert " + (messagePointer + 1) + " of " + alerts.length)
-    $("#msgId").css("background-color",getColor(alert))
+    clr = getColor(alert) + "aa"
+    $("#msgId").css("background-color", clr)
     typed = new Typed(consoleText, {
         strings: [make_text(alert)],
         typeSpeed: 10,
@@ -301,7 +302,7 @@ function display(item) {
     // and show the selected alert
     tableDisp.style.display = "block";
     $("#table_display").html(make_text(item));
-    $("#table_display").css("background-color", getColor(item));
+    $("#table_display").css("background-color", getColor(item)+"aa");
 
 }
 
