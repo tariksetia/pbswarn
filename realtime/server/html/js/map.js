@@ -1,10 +1,10 @@
 /**************************************************************
  *
- *  Copyright (c) 2018 Public Broadcasting Service 
+ *  Copyright (c) 2018 Public Broadcasting Service
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
- * 
- *  Version 1.7 10/14/2018
+ *
+ *  Version 1.10 10/18/2018
  *
  *************************************************************/
 
@@ -12,10 +12,14 @@ var alerts;
 var loaded = false;
 
 var extreme = "#f99";
-var severe = "#ff9";
+var severe = "#f2e765"; // "#ff9";
 var moderate = "#8ff";
 var minor = "#9f9";
 var unknown = "#fff";
+
+String.prototype.replaceAll = function(search, replacement) {
+    return String.prototype.replace(new RegExp(search, 'g'), replacement);
+};
 
 //////////////////////////////////////////////////////
 // Scroll Viewer
@@ -44,27 +48,27 @@ function showScroll() {
     consoleBG.style.display = "block";
     tableDisp.style.display = "none";
     $('#scrollBtn').html('Hide Scroll');
-    
 }
 
 function isLoaded() {
-    if (typeof(alerts) != "undefined") { return true; } 
+    if (typeof(alerts) != "undefined") { return true }
     return false;
 }
 
-// button click to show/hide the console
+// button click to show/hide the Scroller
 $('#scrollBtn').click(function(){
   if (consoleBG.style.display == "block") {
-      hideScroll();
+      hideScroll()
   } else {
-      showScroll(); 
+      consoleBG.style.display="block"
+      showScroll()
       runTT()
   }
 });
 
 function updateScroll() { // called when new data arrives
-    // if we're not actively typing, if scroll is visible, restart the scroll engine
-    if (typeof(typed) == "undefined") {
+    // if we're not actively typing, if scroll is visible, restart the scroll
+    if ( typeof(typed) == "undefined") {
         messagePointer = 0;
         if (consoleBG.style.display == "block") {
             runTT();
@@ -78,21 +82,28 @@ function runTT() {
         if (messagePointer >= alerts.length) {
              messagePointer = 0;
         }
-        typeAlert(messagePointer);
-        messagePointer++;
+        alert = alerts[messagePointer]
+        focusOn(alert)
+        typeAlert(alert)
+        messagePointer++
     } else {
-        $("#msgId").html("No Alerts");
+        // if no alerts, hide the scroll background and reset the button
+        $("#msgId").html("No alerts")
+        consoleBG.style.backgroundColor="transparent"
+        $('#scrollBtn').html("Scroll")
+        msgId.style.display="block"
     }
 }
 
-function typeAlert(messagePointer) {  // launches runTT() again when complete
+function typeAlert(alert) {  // launches runTT() again when complete
     if (typeof(typed) != "undefined") {  // kill any still-running typer
         typed.destroy();
     }
-    consoleText.textContent = "";
-    $("#msgId").html("Alert " + (messagePointer + 1) + " of " + alerts.length);
+    consoleText.textContent = ""
+    $("#msgId").html("Alert " + (messagePointer + 1) + " of " + alerts.length)
+    $("#msgId").css("background-color",getColor(alert))
     typed = new Typed(consoleText, {
-        strings: [make_text(alerts[messagePointer])],
+        strings: [make_text(alert)],
         typeSpeed: 10,
         showCursor: false,
         fadeOut: true,
@@ -102,47 +113,46 @@ function typeAlert(messagePointer) {  // launches runTT() again when complete
         onComplete: function(self) {
             setTimeout(function(){
                 typed.destroy();
-                $("#console_text").css('top',0);
-                runTT();
+                $("#console_text").css('top',0)
+                runTT()
             },
-            2000);
+            2000)
         }
-    });
+    })
 }
 
-// format the alert contents for the console display
+// format the alert contents for the console or table display
 function make_text(alert) {
-    var sent = alert["Sent"];
-    sent = sent.replace("T"," at ");
+    var sent = alert.Sent
+    sent = sent.replace("T"," at ")
     // Now build the html
-    var text = "";
-    if (alert["Status"] == "Test") {
-        text = "<p>*** TEST MESSAGE ***</p>";
-    } else if (alert["Status"] == "Exercise") {
-        text = "<p>*** EXERCISE MESSAGE ***</p>";
-    }
-    text = text + '<small>' + alert["Source"] + "</small><br>" +
-    "<font size='-2'>" + sent + '</font><br>';
-    if (alert["Headline"]!=null) {
-        text = text + '<h4>' + alert["Headline"] + '</h4>';
+    var text = ""
+    var warning = ""
+    if (alert.Status == "Test") { warning = "*** TEST MESSAGE ***" }
+    if (alert.Status == "Exercise") { warning = "*** EXERCISE MESSAGE ***" }
+    if (alert.Headline !=null && alert.Headline.length > 0) {
+        heading = alert.Headline
     } else {
-        text = text + '<h4>' + alert["Cmam"] + '</h4>';
+        heading = alert.Cmam
     }
-    text = text + "<small>" +
-        "<p>" + alert["Levels"] + " - " + alert["ResponseType"] + "</p>" +
-        "<p>" + "WEA Text: <i>\"" + alert["Cmam"] + "\"</i>" + "</p>" +
-        '</small>' +
-        "<p>" + alert['Description'] + '</p>' +
-        "<p>" + alert['Instruction'] + '</p>' +
-        "<p>Area: " + alert['AreaDesc'] + '</p>' +
-        "<small><p>Expires: " + alert['Expires'].replace('T',' ') + "</p></small>" +
-        "<font size='-2'><p>Ref: " + alert['ID'] + "</p></font>";
-    if (alert["Status"] == "Test") {
-        text = text + "<p>*** TEST MESSAGE ***</p>";
-    }
-    if (alert["Status"] == "Exercise") {
-        text = text + "<p>*** EXERCISE MESSAGE ***</p>";
-    }    
+    ad = alert.AreaDesc
+    ad = ad.replaceAll(",", ", "); // ensure that comma-spliced strings wrap
+    if (warning != "") { text = "<p>${warning}</p>"}
+    text += `
+<small>${alert.Source}</small><br>
+<font size='-2'>${sent}</font>
+<p><font size="+1">${heading}</font></p>
+<small>
+<p> ${alert.Levels} - ${alert.ResponseType}</p>
+<p>WEA Text: <i>${alert.Cmam}</i></p>
+</small>
+<p>${alert.Description}</p>
+<p>${alert.Instruction}</p>
+<p>Area: ${ad} </p>
+<small><p>Expires: ${alert.Expires.replace('T',' ')}</p></small>
+<font size='-2'><p>Ref: ${alert.ID} </p></font><br>
+            `
+    if (warning != "") { text += "<p>${warning}</p>"}
     return text;
 }
 
@@ -194,8 +204,14 @@ function hideList() {
 }
 
 function showList() {
-    tableBG.style.display = "block";
-    $('#tableBtn').html('Hide List');
+    if (typeof(alerts) != "undefined") {
+        if (alerts.length > 0) {
+            tableBG.style.display = "block";
+            $('#tableBtn').html('Hide List');
+        } else {
+            tableBG.style.display = "none";
+        }
+    }
 }
 
 // button click to toggle the table viewer
@@ -228,13 +244,19 @@ function updateTable() {
                 { render: function (data, type, row) {
                         slug = row.Headline;
                         if (slug == "") { slug =  row.Cmam; }
-                        if (slug.length > 80) {
-                            slug = slug.substring(0,77) + "...";   
-                        }
+                        if (slug.length > 80) { slug = slug.substring(0,77) + "..." }
                         snt = row.Sent.replace("T", " at ");
+                        response = row.ResponseType;
+                        if (response == "") { response = "Alert"}
+                        severity = row.Levels.split("/")[1];
+                        if (severity == "") { severity="Unknown"};
                         color = getColor(row);
-                        cell = "<div><div style=\"color:" + color + "\"><strong>" + slug + "</strong></div>" + 
-                            "<div><small>From " + row.Source + " on " + snt + "</small></div></div>";
+                        cell = `
+<div class="${severity }">
+<div><span class="response">${response}</span>
+<span class="headline">${slug} </span></div>
+<div class="origin">From ${row.Source} on ${snt}</div></div>
+                                `
                         return cell
                     }
                 }
@@ -244,9 +266,11 @@ function updateTable() {
         $('#table').on('click', 'tr', function () {
             var item = dataTable.row( this ).data();
             // zoom the map to (aggregate) bounds of the alert's polys
-            focusOn(item);
-            polygons = item.Polygons;
-            display( item );
+            if (typeof(typed) != "undefined") {
+                focusOn(item);
+                polygons = item.Polygons;
+                display( item );
+            }
         } );
     } else {  // existing dataTable, reload latest data
         dataTable.clear();
@@ -277,6 +301,8 @@ function display(item) {
     // and show the selected alert
     tableDisp.style.display = "block";
     $("#table_display").html(make_text(item));
+    $("#table_display").css("background-color", getColor(item));
+
 }
 
 function tableTextHide() {
@@ -347,34 +373,18 @@ function plot(alert) {
         for (var i = 0; i<polygons.length; i++) {
             plot_polygon(polygons[i], color, alert);
         }
-        var label = alert["ResponseType"];
-        if (label == "") {
-            label = "Alert";
-        }
-        if (alert["Status"] == "Test") {
-            label = "TEST"   
-        }
-        if (alert["Status"] == "Exercise") {
-            label = "EXERCISE"   
-        }
+        var label = alert["ResponseType"]
+        if (label == "") { abel = "Alert"  }
+        if (alert.Status == "Test") { label = "TEST" }
+        if (alert.Status == "Exercise") { label = "EXERCISE" }
         // style icon and label per alert severity
         sev = alert.Levels.split("/")[1]
-        if (sev.includes("Extreme")) {
-            iClass = "alertIconExtreme";
-            icon = extremeIcon;
-        } else if (sev.includes("Severe")) {
-            iClass = "alertIconSevere";
-            icon = severeIcon;
-        } else if (sev.includes("Moderate")) {
-            iClass = "alertIconModerate";
-            icon = moderateIcon;
-        } else if (sev.includes("Minor")) {
-            iClass = "alertIconMinor";
-            icon = minorIcon;
-        } else {
-            iClass = "alertIconExtreme";
-            icon = "unknownIcon";
-        }
+        iClass = "alertIconUnknown"
+        icon = "unknownIcon"
+        if (sev.includes("Extreme")) { iClass = "alertIconExtreme"; icon = extremeIcon }
+        if (sev.includes("Severe")) { iClass = "alertIconSevere"; icon = severeIcon}
+        if (sev.includes("Moderate")) {iClass = "alertIconModerate"; icon = moderateIcon}
+        if (sev.includes("Minor")) {iClass = "alertIconMinor"; icon = minorIcon}
         var myIcon = L.divIcon({className: iClass, iconSize: null, html: label});
         var label = L.marker( center, {icon: myIcon}).addTo(map).addTo(markerGroup);
         marker = L.marker(center, {icon: icon}).addTo(map).addTo(markerGroup); 
@@ -430,7 +440,7 @@ function plot_polygon(polygon, color, alert) {
     center = thisPoly.getCenter();  // coordinates for icon
     return thisPoly;
 }
- 
+
 // create a Leaflet LatLngBounds object from a CAP-format (lat,lon lat,lon...) polygon string
 function getBounds(polygon) {
     var new_poly = [];
@@ -443,19 +453,30 @@ function getBounds(polygon) {
     return L.polygon(new_poly).getBounds()
 }
 
-// zoom the map to the bounds of the supplied JSON alert 
+// zoom the map to feature the selected JSON alert
 function focusOn(item) {
-    var bounds = getBounds(item.Polygons[0]);
-    for (var i=1;i<item.Polygons.length; i++) {
-        bounds.extend( getBounds(item.Polygons[i]) );
+    if (typeof(item) != "undefined") {
+        var bounds = getBounds(item.Polygons[0])
+        for (var i=1;i<item.Polygons.length; i++) {
+            bounds.extend( getBounds(item.Polygons[i]) )
+        }
+        // shift the map center to a better spot on the screen
+        s = bounds.getSouth()
+        w = bounds.getWest()
+        n = bounds.getNorth()
+        e = bounds.getEast()
+        oLat = (n-s)/4
+        oLon = (w-e)/1.5
+        newBounds = L.latLngBounds(L.latLng(s-oLat, w+oLon), L.latLng(n-oLat, e+oLon))
+        // and adjust the map view to feature selected alert
+        map.fitBounds(newBounds.pad(0.3))
     }
-    map.fitBounds(bounds.pad(0.3));  
 }
 
 // clear the map
 function clearMap() {
-    markerGroup.clearLayers();
-    polyGroup.clearLayers();
+    markerGroup.clearLayers()
+    polyGroup.clearLayers()
 }
     
 //////////////////////////////////////////////////////
