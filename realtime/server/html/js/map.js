@@ -180,7 +180,7 @@ const make_text = alert => {
     } else {
         heading = alert.Cmam
     }
-    ad = alert.AreaDesc.replaceAll(",", ", "); // ensure that comma-spliced areaDesc wraps
+    ad = alert.AreaDesc
     if (warning != "") { text = "<p>${warning}</p>"}
     text += `
 <small>${alert.Source}</small><br>
