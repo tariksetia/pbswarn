@@ -7,3 +7,4 @@ The database on the map server contains two tables:
 
 # Service
 **warnAlerts.go** runs as a service that renders current alerts as a JSON file on the web server.
+**alerts.js** is an updated node.js version of warnAlerts
