@@ -4,22 +4,62 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.9 10/16/2018
+ *  Version 1.13 10/22/2018
  *
  *************************************************************/
 
 var alerts;
 var loaded = false;
 
-var extreme = "#ff9999";
-var severe = "#f2e765"; // "#ff9";
-var moderate = "#88ffff";
-var minor = "#99ff99";
-var unknown = "#ffffff";
+const extreme = "#ff9999";
+const severe = "#f2e765";
+const moderate = "#88ffff";
+const minor = "#99ff99";
+const unknown = "#ffffff";
 
 String.prototype.replaceAll = function(search, replacement) {
     return String.prototype.replace(new RegExp(search, 'g'), replacement);
 };
+
+const smallScreen = () => {
+    w = $(window).width()
+    if ( w < 1050) {
+        return true
+    } else {
+        return false
+    } 
+}
+
+//////////////////////////////////////////////////////
+// Local Storage
+//////////////////////////////////////////////////////
+
+// try to retrieve saved view parameters from LocalStorage
+const resetView = evt => {
+    try {
+        mbdict = JSON.parse(localStorage.defaultBounds)
+        var swLatLng = L.latLng([mbdict["_southWest"]["lat"],mbdict["_southWest"]["lng"]])
+        var neLatLng = L.latLng([mbdict["_northEast"]["lat"],mbdict["_northEast"]["lng"]])
+        mbounds = L.latLngBounds(swLatLng, neLatLng)
+        map.fitBounds(mbounds)
+    } catch {}
+}
+
+const setDefaultViewToCurrent = () => {
+    $.confirm({
+        title: '',
+        backgroundDismiss: true,
+        content: 'Save current map view as default?',
+        boxWidth: '15%',
+        useBootstrap: false,
+        buttons: {
+            Yes: function () {
+                localStorage.defaultBounds = JSON.stringify(map.getBounds())
+            },
+            No: function () { },
+        }
+    });
+}
 
 //////////////////////////////////////////////////////
 // Scroll Viewer
@@ -27,30 +67,30 @@ String.prototype.replaceAll = function(search, replacement) {
 
 var tt_running = false;
 var typed;
-var hold = 3000;
+const hold = 3000;
 var messageArray;
 var messagePointer = 0;
 
-var consoleBG = document.getElementById('console_bg');
-var consoleWindow = document.getElementById('console_window');
-var consoleText = document.getElementById('console_text');
-var tableBG = document.getElementById('table_window');
-var tableDisp = document.getElementById('table_display');
+const consoleBG = document.getElementById('console_bg');
+const consoleWindow = document.getElementById('console_window');
+const consoleText = document.getElementById('console_text');
+const tableBG = document.getElementById('table_window');
+const tableDisp = document.getElementById('table_display');
 var displayWindow;
 
-function hideScroll() {
+const hideScroll = () => {
     consoleBG.style.display = "none";
-    $('#scrollBtn').html('Scroll');
+    $('#scrollBtn').html('Scanner');
     haltTT();
 }
 
-function showScroll() {
+const showScroll = () => {
     consoleBG.style.display = "block";
     tableDisp.style.display = "none";
-    $('#scrollBtn').html('Hide Scroll');
+    $('#scrollBtn').html('Scanner Off');
 }
 
-function isLoaded() {
+const isLoaded = () => {
     if (typeof(alerts) != "undefined") { return true }
     return false;
 }
@@ -66,7 +106,7 @@ $('#scrollBtn').click(function(){
   }
 })
 
-function updateScroll() { // called when new data arrives
+const updateScroll = () => { // called when new data arrives
     // if we're not actively typing, if scroll is visible, restart the scroll
     if ( typeof(typed) == "undefined") {
         messagePointer = 0;
@@ -77,25 +117,29 @@ function updateScroll() { // called when new data arrives
 }
 
 // type the next alert in rotation in sliding div id="console_text"
-function runTT() {
+const runTT = () => {
     if (alerts.length > 0) {
         if (messagePointer >= alerts.length) {
              messagePointer = 0;
         }
         alert = alerts[messagePointer]
+        showScroll();
         focusOn(alert)
+        consoleBG.style.backgroundColor = "#ffffffaa"
         typeAlert(alert)
         messagePointer++
     } else {
-        // if no alerts, hide the scroll background and reset the button
+        // if no alerts, hide the scroll background, reset the button and view
         $("#msgId").html("No alerts")
         consoleBG.style.backgroundColor="transparent"
-        $('#scrollBtn').html("Scroll")
+        msgId.style.backgroundColor = "#fff";
+        //$('#scrollBtn').html("Scanner")
         msgId.style.display="block"
+        resetView()
     }
 }
 
-function typeAlert(alert) {  // launches runTT() again when complete
+const typeAlert = alert => {  // launches runTT() again when complete
     if (typeof(typed) != "undefined") {  // kill any still-running typer
         typed.destroy();
     }
@@ -123,7 +167,7 @@ function typeAlert(alert) {  // launches runTT() again when complete
 }
 
 // format the alert contents for the console or table display
-function make_text(alert) {
+const make_text = alert => {
     var sent = alert.Sent
     sent = sent.replace("T"," at ")
     // Now build the html
@@ -136,8 +180,7 @@ function make_text(alert) {
     } else {
         heading = alert.Cmam
     }
-    ad = alert.AreaDesc
-    ad = ad.replaceAll(",", ", "); // ensure that comma-spliced strings wrap
+    ad = alert.AreaDesc.replaceAll(",", ", "); // ensure that comma-spliced areaDesc wraps
     if (warning != "") { text = "<p>${warning}</p>"}
     text += `
 <small>${alert.Source}</small><br>
@@ -149,7 +192,7 @@ function make_text(alert) {
 </small>
 <p>${alert.Description}</p>
 <p>${alert.Instruction}</p>
-<p>Area: ${ad} </p>
+<p>Area: ${ad}</p>
 <small><p>Expires: ${alert.Expires.replace('T',' ')}</p></small>
 <font size='-2'><p>Ref: ${alert.ID} </p></font><br>
             `
@@ -157,61 +200,86 @@ function make_text(alert) {
     return text;
 }
 
-function isCurrent(item) {  // true if not expired
-    expString = item.Expires;
-    exp = new Date(expString);
-    zExp = new Date(exp.toISOString()).toISOString();
-    now = new Date(new Date().toUTCString().substr(0, 25));
+const isCurrent = item => {  // true if not expired
+    expString = item.Expires
+    exp = new Date(expString)
+    zExp = new Date(exp.toISOString()).toISOString()
+    now = new Date(new Date().toUTCString().substr(0, 25))
     if (now > zExp) {
-        return false;
+        return false
     } else {
-        return true;
+        return true
     }
 }
 
 // interval-driven function to scroll up text as needed
-var youInterval = setInterval(scrollUp, 200);
-function scrollUp() {
-    var windowHeight = parseInt($("#console_window").height());
-    var textHeight = parseInt($("#console_text").height());
-    var offset = parseInt(windowHeight - textHeight);
+const scrollUp = () => {
+    var windowHeight = parseInt($("#console_window").height())
+    var textHeight = parseInt($("#console_text").height())
+    var offset = parseInt(windowHeight - textHeight)
     if (offset < 0) {
-        $("#console_text").css('top',offset);
+        $("#console_text").css('top', offset)
     } else {
-        $("#console_text").css('top',0);
+        $("#console_text").css('top',0)
     }
 }
+var youInterval = setInterval(scrollUp, 200)
 
 // on console close, stop the typewriter
-function haltTT() {
+const haltTT = () => {
     tt_running = false;
     if (typeof(typed) != "undefined") {
-        typed.destroy();
+        typed.destroy()
     }
-    $("#console_text").css('top',0);
+    $("#console_text").css('top',0)
 }
 
-if ( !loaded ) { showScroll(); }
-loaded = true;
+const scanVisible = () => {
+    if (consoleBG.style.display = "block") {
+        return true
+    } else {
+        return false
+    }
+}
+
+//if ( !loaded ) { showScroll() }
+//loaded = true;
 
 //////////////////////////////////////////////////////
 // Tabular Viewer
 //////////////////////////////////////////////////////
 
-function hideList() {
-    tableBG.style.display = "none";
-    tableDisp.style.display = "none";
-    $('#tableBtn').html('List');
+const hideList = () => {
+    tableBG.style.display = "none"
+    tableDisp.style.display = "none"
+    $('#tableBtn').html('List')
 }
 
-function showList() {
+const showList = () => {
     if (typeof(alerts) != "undefined") {
         if (alerts.length > 0) {
-            tableBG.style.display = "block";
-            $('#tableBtn').html('Hide List');
+            tableBG.style.display = "block"
+            $('#tableBtn').html('Hide List')
         } else {
-            tableBG.style.display = "none";
+            tableBG.style.display = "none"
+            console.log("List Hidden, no alerts")
         }
+    }
+}
+
+const itemVisible = () => {
+    if (tableDisp.style.display = "block") {
+        return true
+    } else {
+        return false
+    }
+}
+
+const listVisible = () => {
+    if (tableBG.style.display = "block") {
+        return true
+    } else {
+        return false
     }
 }
 
@@ -227,9 +295,11 @@ $('#tableBtn').click(function(){
 // once we have data, set up the table
 var tableLoaded = false;
 var dataTable;
-function updateTable() {
+const updateTable = () => {
     if (!tableLoaded) {  // if startup, init dataTable
-        showList(); // visible by default as soon as there's data
+        if (!smallScreen()) {
+            showList()
+        }
         tableLoaded = true;
         dataTable = $('#table').DataTable( {
             data: alerts,
@@ -250,8 +320,8 @@ function updateTable() {
                         response = row.ResponseType;
                         if (response == "") { response = "Alert"}
                         severity = row.Levels.split("/")[1];
-                        if (severity == "") { severity="Unknown"};
-                        color = getColor(row);
+                        if (severity == "") { severity="Unknown"}
+                        color = getColor(row)
                         cell = `
 <div class="${severity }">
 <div><span class="response">${response}</span>
@@ -265,49 +335,48 @@ function updateTable() {
         });
         // set click handler on table row
         $('#table').on('click', 'tr', function () {
-            var item = dataTable.row( this ).data();
+            var item = dataTable.row( this ).data()
             // zoom the map to (aggregate) bounds of the alert's polys
             if (typeof(typed) != "undefined") {
-                focusOn(item);
-                polygons = item.Polygons;
-                display( item );
+                focusOn(item)
+                polygons = item.Polygons
+                display( item )
             }
         } );
     } else {  // existing dataTable, reload latest data
-        dataTable.clear();
-        dataTable.rows.add(alerts);
-        dataTable.draw();
+        dataTable.clear()
+        dataTable.rows.add(alerts)
+        dataTable.draw()
     }
 }
 
 // get the severity-based color value for an alert
-function getColor(item) {
+const getColor = item => {
     sev = item.Levels.split("/")[1]
     if (sev.includes("Extreme")) {
-        return extreme;
+        return extreme
     } else if (sev.includes("Severe")) {
-        return severe;
+        return severe
     } else if (sev.includes("Moderate")) {
-        return moderate;
+        return moderate
     } else if (sev.includes("Minor")) {
-        return minor;
+        return minor
     } else {
-        return unknown;
+        return unknown
     }
 }
 
-function display(item) {
-    // hide the Printer
+const display = item => {
+    // hide the Scroller
     hideScroll();
-    // and show the selected alert
-    tableDisp.style.display = "block";
-    $("#table_display").html(make_text(item));
-    $("#table_display").css("background-color", getColor(item)+"aa");
-
+    // and show the selected alert in the display space
+    tableDisp.style.display = "block"
+    $("#table_display").html(make_text(item))
+    $("#table_display").css("background-color", getColor(item)+"aa")
 }
 
-function tableTextHide() {
-    tableDisp.style.display = "none";
+const tableTextHide = () => {
+    tableDisp.style.display = "none"
 }
 
 //////////////////////////////////////////////////////
@@ -315,8 +384,8 @@ function tableTextHide() {
 //////////////////////////////////////////////////////
 
 // set up the map, use stored view if any
-var centerLat, centerLon, defaultZoom;
-var map = L.map('map',zoomDelta=0.1).setView([39.833, -98.583], 4.2);
+var centerLat, centerLon, defaultZoom
+var map = L.map('map',zoomDelta=0.1).setView([39.833, -98.583], 4.2)
 if (localStorage.defaultBounds) {
     resetView();
 }
@@ -358,21 +427,21 @@ L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
     attribution: 'Map &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors | Wireless Emergency Alerts from PBS WARN @ KVIE, Sacramento\n'
 }).addTo(map);
 
-var markerGroup = L.layerGroup().addTo(map);
-var polyGroup = L.layerGroup().addTo(map);
+var markerGroup = L.layerGroup().addTo(map)
+var polyGroup = L.layerGroup().addTo(map)
 
 // plot an alert on the map
-function plot(alert) {
-    var popup = make_text(alert);
-    tiptext = alert["Cmam"];
+const plot = alert => {
+    var popup = make_text(alert)
+    tiptext = alert.Cmam
     if (tiptext == '') {
-        tiptext = alert['Headline']
+        tiptext = alert.Headline
     }
     polygons = alert["Polygons"];
     color = getColor(alert);
     if (polygons.length > 0) {  // if there's no polygon by now, skip plotting
         for (var i = 0; i<polygons.length; i++) {
-            plot_polygon(polygons[i], color, alert);
+            plot_polygon(polygons[i], color, alert)
         }
         var label = alert["ResponseType"]
         if (label == "") { abel = "Alert"  }
@@ -386,42 +455,42 @@ function plot(alert) {
         if (sev.includes("Severe")) { iClass = "alertIconSevere"; icon = severeIcon}
         if (sev.includes("Moderate")) {iClass = "alertIconModerate"; icon = moderateIcon}
         if (sev.includes("Minor")) {iClass = "alertIconMinor"; icon = minorIcon}
-        var myIcon = L.divIcon({className: iClass, iconSize: null, html: label});
-        var label = L.marker( center, {icon: myIcon}).addTo(map).addTo(markerGroup);
-        marker = L.marker(center, {icon: icon}).addTo(map).addTo(markerGroup); 
+        var myIcon = L.divIcon({className: iClass, iconSize: null, html: label})
+        var label = L.marker( center, {icon: myIcon}).addTo(map).addTo(markerGroup)
+        marker = L.marker(center, {icon: icon}).addTo(map).addTo(markerGroup)
         marker.addEventListener("click", function(event) {
-            display(alert);
-            focusOn(alert);
+            display(alert)
+            focusOn(alert)
         })
         label.addEventListener("click", function(event) {
-            display(alert);
-            focusOn(alert);
+            display(alert)
+            focusOn(alert)
         })
         marker.bindTooltip(tiptext);
     }
 }
 
 // get center point of supplied alert
-function getCenterOf(item) {
-    var bounds = make_bounds(item.Polygons[0]);
+const getCenterOf = item => {
+    var bounds = make_bounds(item.Polygons[0])
     for (var i=1;i<item.Polygons.length; i++) {
-        bounds.extend( make_bounds(item.Polygons[i]) );
+        bounds.extend( make_bounds(item.Polygons[i]) )
     }
-   return L.LatLng([bounds.centerLat, bounds.centerLon]);
+   return L.LatLng([bounds.centerLat, bounds.centerLon])
 }
 
 // translate CAP polygon to Leaflet polygon object
-function plot_polygon(polygon, color, alert) {
+const plot_polygon = (polygon, color, alert) => {
     new_polygon = []
     var lat, lon
     if (typeof(polygon) == "string") { // if polygon is a new-style string
-        points = polygon.split(" ");
+        points = polygon.split(" ")
         for (var i=0;i<points.length;i++) {
             var point = points[i]
-            splitp = point.split(",");
-            lat = splitp[0];
-            lon = splitp[1];
-            point = [parseFloat(lat),parseFloat(lon)];
+            splitp = point.split(",")
+            lat = splitp[0]
+            lon = splitp[1]
+            point = [parseFloat(lat),parseFloat(lon)]
             new_polygon.push(point )
         };
     } else {
@@ -438,124 +507,130 @@ function plot_polygon(polygon, color, alert) {
                             opacity: 0.8,
                         }).addTo(map).addTo(polyGroup);
     thisPoly.on("click", function(event) { display(alert); })
-    center = thisPoly.getCenter();  // coordinates for icon
-    return thisPoly;
+    center = thisPoly.getCenter()  // coordinates for icon
+    return thisPoly
 }
 
 // create a Leaflet LatLngBounds object from a CAP-format (lat,lon lat,lon...) polygon string
-function getBounds(polygon) {
-    var new_poly = [];
-    points = polygon.split(" ");
+const getBounds = polygon => {
+    var new_poly = []
+    points = polygon.split(" ")
     for(var i = 0; i<points.length; i++)  {
-        point = points[i];
-        here = L.latLng(point.split(","));
+        point = points[i]
+        here = L.latLng(point.split(","))
         new_poly.push(here)
     }
     return L.polygon(new_poly).getBounds()
 }
 
-// zoom the map to feature the selected JSON alert
-function focusOn(item) {
-    if (typeof(item) != "undefined") {
-        var bounds = getBounds(item.Polygons[0])
-        for (var i=1;i<item.Polygons.length; i++) {
-            bounds.extend( getBounds(item.Polygons[i]) )
+// get aggregate bounds of all polys in an item
+const itemBounds = item => {
+    var bounds = getBounds(item.Polygons[0])
+    for (var i=1;i<item.Polygons.length; i++) {
+        bounds.extend( getBounds(item.Polygons[i]) )
+    }
+    return bounds
+}
+
+// get aggregate bounds of all items in alerts
+const allBounds = alerts => {
+    if (typeof(alerts) != 'undefined') {
+        var abounds = itemBounds(alerts[0]);
+        if (alerts.length > 1) {
+            for (var i=1;i<alerts.length; i++) {
+                abounds.extend(itemBounds(alerts[i]))
+            }
         }
-        // shift the map center to a better spot on the screen
-        s = bounds.getSouth()
-        w = bounds.getWest()
-        n = bounds.getNorth()
-        e = bounds.getEast()
-        oLat = (n-s)/4
-        oLon = (w-e)/1.5
-        newBounds = L.latLngBounds(L.latLng(s-oLat, w+oLon), L.latLng(n-oLat, e+oLon))
-        // and adjust the map view to feature selected alert
-        map.fitBounds(newBounds.pad(0.3))
+        return abounds
+    } else {
+        return null
     }
 }
 
+// zoom the map to feature the selected JSON alert
+const focusOn = item => {
+    if (typeof(item) != "undefined") {
+        bounds = itemBounds(item)
+        // if scanner or list text visible, shift the map center to a better spot on the screen
+        if (scanVisible) {
+            map.fitBounds(shiftBounds(bounds).pad(0.3))
+        }
+    }
+}
+
+const shiftBounds = bounds => {
+    s = bounds.getSouth()
+    w = bounds.getWest()
+    n = bounds.getNorth()
+    e = bounds.getEast()
+    oLat = (n-s)/4
+    oLon = (w-e)/1.5
+    return L.latLngBounds(L.latLng(s-oLat, w+oLon), L.latLng(n-oLat, e+oLon))
+}
+
 // clear the map
-function clearMap() {
+const clearMap = () => {
     markerGroup.clearLayers()
     polyGroup.clearLayers()
 }
     
 //////////////////////////////////////////////////////
-// Local Storage
-//////////////////////////////////////////////////////
-// try to retrieve  saved view parameters from LocalStorage
-function resetView(evt) {
-    try {
-        mbdict = JSON.parse(localStorage.defaultBounds);
-        var swLatLng = L.latLng([mbdict["_southWest"]["lat"],mbdict["_southWest"]["lng"]]);
-        var neLatLng = L.latLng([mbdict["_northEast"]["lat"],mbdict["_northEast"]["lng"]]);
-        mbounds = L.latLngBounds(swLatLng, neLatLng);
-        map.fitBounds(mbounds);
-    } catch {}
-}
-
-function setDefaultViewToCurrent() {
-    $.confirm({
-        title: '',
-        backgroundDismiss: true,
-        content: 'Save current map view as default?',
-        boxWidth: '15%',
-        useBootstrap: false,
-        buttons: {
-            Yes: function () {
-                localStorage.defaultBounds = JSON.stringify(map.getBounds());
-            },
-            No: function () { },
-        }
-    });
-}
-
-//////////////////////////////////////////////////////
 // Data Feed from server
 //////////////////////////////////////////////////////
-function poll() {
+const poll = () => {
     try {
     $.ajax({
       url: "http://warn.pbs.org/alerts.json",
       data: "",
       success: success,
       error: success,
-      error: success,
       dataType: "text/XML"
-    });
+    })
     } catch(e) {
-        console.log("server poll failed: " + e);
+        console.log("server poll failed: " + e)
     }
 }
 
 // handle arrival of new JSON data from server
-function success(data) {
+const success = data => {
     clearMap();
     try {
-        j = JSON.parse(data.responseText);
+        j = JSON.parse(data.responseText)
     } catch {
         return;
     }
-    $('#hb').html("Link up " + moment(j.heartbeat).format("YYYY-MM-DD HH:mm:ss") + " UTC");
-    alerts = j.alerts;
+    $('#hb').html("Link up " + moment(j.heartbeat).format("YYYY-MM-DD HH:mm:ss") + " UTC")
+    alerts = j.alerts
     // tell dataTable and scroller to update (from global 'alerts' object)
-    updateTable(); 
-    updateScroll();
+    updateTable()
+    updateScroll()
     var i=0, item;
     while(item = alerts[i++]) {
         if (isCurrent(item)) {  
-            plot(item);
+            plot(item)
         } 
     }
+    if (!loaded && smallScreen()) {
+        map.fitBounds(allBounds(alerts).pad(0.3))
+    }
+    loaded = true;
 }
 
 // initial poll and set up interval
 $(document).ready(function () {
-    poll();
-    setInterval(poll, 10000);
+    if (smallScreen()) {
+        hideScroll()
+        hideList()
+        console.log("Small Screen")
+    } else {
+        showScroll()
+        showList()
+    }
+    poll()
+    setInterval(poll, 10000)
 });
 
 // when map regains screen focus, poll the alerts data immediately
 $(window).bind('focus', function() {
-    poll();
+    poll()
 });
