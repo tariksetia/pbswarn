@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.13 10/22/2018
+ *  Version 1.14 10/24/2018
  *
  *************************************************************/
 
@@ -387,9 +387,9 @@ const tableTextHide = () => {
 var centerLat, centerLon, defaultZoom
 var map = L.map('map',zoomDelta=0.1).setView([39.833, -98.583], 4.2)
 if (localStorage.defaultBounds) {
-    resetView();
+    resetView()
 }
-var center;
+var center
 // load colored pins for severity indication
 var extremeIcon = L.icon({
     iconUrl: 'img/extremeIcon.png',
@@ -584,7 +584,8 @@ const poll = () => {
       data: "",
       success: success,
       error: success,
-      dataType: "text/XML"
+      dataType: "text/XML",
+      cache: false
     })
     } catch(e) {
         console.log("server poll failed: " + e)
