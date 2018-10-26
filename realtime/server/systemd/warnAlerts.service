@@ -1,0 +1,13 @@
+[Unit]
+ Description=PBS WARN Map Data File Generator
+
+ [Service]
+ ExecStart=/usr/bin/node /home/pbs/alerts.js
+ WorkingDirectory=/home/pbs
+ Restart=always
+ RestartSec=5
+ StartLimitIntervalSec=0
+ User=pbs
+
+ [Install]
+ WantedBy=multi-user.target
