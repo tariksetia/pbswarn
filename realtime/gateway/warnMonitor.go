@@ -1,3 +1,13 @@
+/**************************************************************
+ *
+ *  Copyright (c) 2018 Public Broadcasting Service
+ *  Contact: <warn@pbs.org>
+ *  All Rights Reserved.
+ *
+ *  Version 1.16 10/28/2018
+ *
+ *************************************************************/
+
 package main
 
 import (
@@ -114,16 +124,18 @@ func messageProcessor(message []byte) {
     alert = parseAlert(message)
     uniqueID = alert.SenderID + "," + alert.MessageID + "," + alert.SentDate
     // if cancel or update, mark referenced earlier message in DB
-    if alert.MessageType == "Cancel" {
-        for replaces := range alert.ReferenceIDs {
-            log.Println(replaces, " replaced by ", uniqueID)
-            statement := `update alerts set replacedBy = ? where identifier = ?`
-            ps, err := db.Prepare(statement)
-            check(err)
-            // execute DB statement
-            _, err = ps.Exec(uniqueID, replaces)
-            check (err)
-            ps.Close()
+    if alert.MessageType == "Cancel" || alert.MessageType == "Update" {
+        if len(alert.ReferenceIDs) > 0 {
+            for _, replaces := range alert.ReferenceIDs {
+                log.Println(replaces, " replaced by ", uniqueID)
+                statement := `update alerts set replacedBy = ? where identifier = ?`
+                ps, err := db.Prepare(statement)
+                check(err)
+                // execute DB statement
+                _, err = ps.Exec(uniqueID, replaces)
+                check (err)
+                ps.Close()
+            }
         }
     }
     // If no Infos, it's probably a cancel, expire it immediately for display purposes
@@ -143,7 +155,7 @@ func messageProcessor(message []byte) {
         log.Print("Db.Query() failed : ", err)
     } else {
         if rows.Next() {
-            log.Println("DUPLICATE")
+            log.Println("DUPLICATE", alert.MessageID)
         } else {
             // send it to the database
             go toDatabase(capString, &alert, receivedTime, expiresTime)
