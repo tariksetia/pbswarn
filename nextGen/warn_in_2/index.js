@@ -55,14 +55,13 @@ exports.handler = (event, context, callback) => {
         });
             
         // and extract latest expires time across all Infos
-        try {
-            var infos = alert.info
-            for (var o of infos) {
-                if (o.expires > alertExpires) {
-                    alertExpires = o.expires
+        if (typeof alert.info != 'undefined') {
+            for (var info of alert.info) {
+                if (info.expires > alertExpires) {
+                    alertExpires = info.expires
                 } 
             }
-        } catch (e) { console.log("XML failed:", e)}
+        } 
         
         // Now, if it's a CAP message, post the new alert to DB
         if (ns == "urn:oasis:names:tc:emergency:cap:1.2") {
