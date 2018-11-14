@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.16 10/28/2018
+ *  Version 1.17 11/14/2018
  *
  *************************************************************/
 
@@ -21,6 +21,9 @@ import (
     "pbs/warn/catcher"
     "strings"
     "time"
+    "net/http"
+    "fmt"
+    "io/ioutil"
 
     // mysql driver
     _ "github.com/go-sql-driver/mysql"
@@ -112,10 +115,18 @@ func messageProcessor(message []byte) {
     _, err = ps.Exec(receivedTime)
     check (err)
 
+    // now post XML to API
+    resp := postXml(message)
+    // in case of an HTTP error, pause and retry
+    if resp.Status != "200 OK" {
+        time.Sleep(2000)
+        resp = postXml(message)
+    }
+
     // if heartbeat message, do no more
     if bytes.Equal([]byte("heartbeat"), message) {
         return
-    }
+    } 
 
     // parse message into Alert struct per github.com/mark-adams/cap-go/cap
     var alert cap.Alert
@@ -317,4 +328,21 @@ func check(err error) {
     if err != nil {
         log.Print("warnMonitor", err.Error())
     }
+}
+
+func postXml(message []byte) *http.Response {
+	post_url := "https://94e38d27ol.execute-api.us-west-2.amazonaws.com/dev"
+    fmt.Println("Sent:",string(message))
+	req, err := http.NewRequest("POST", post_url, bytes.NewBuffer(message))
+	req.Header.Set("Content-Type", "application/xml")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Error", err)
+	}
+	defer resp.Body.Close()
+	fmt.Println("response Status:", resp.Status)
+	body, _ := ioutil.ReadAll(resp.Body)
+	fmt.Println("response Body:", string(body))
+	return resp
 }
