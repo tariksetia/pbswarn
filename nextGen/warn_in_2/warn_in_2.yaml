@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: 'Accept POST of XML messages, post and annotate in DB'
+Resources:
+  warnin2:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: index.handler
+      Runtime: nodejs8.10
+      CodeUri: .
+      Description: 'Accept POST of XML messages, post and annotate in DB'
+      MemorySize: 128
+      Timeout: 3
+      Role: 'arn:aws:iam::751197549810:role/warn_in_2-executor'
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /
+            Method: POST
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-1b201363
+        SubnetIds:
+          - subnet-93248bda
+          - subnet-d337a2b4
+          - subnet-70d9d428
