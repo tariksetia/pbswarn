@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.18 11/17/2018
+ *  Version 1.19 11/17/2018
  *
  *************************************************************/
 
@@ -12,7 +12,7 @@
 
 const moment = require('moment')
 const xml2js = require('xml2js')
-const mysql = require('mysql2')
+const mysql = require('mysql2/promise')
 const atob = require('atob')
 
 var now
@@ -55,10 +55,12 @@ exports.handler = async (event, context, callback) => {
 
 async function updateHeartbeat() {
     var sql = "UPDATE warn.heartbeat SET latest=? WHERE Id=1"
-    pool.execute(sql, [now], function(error, results) {
-        if (error) console.log("updateHeartbeat pool.execute Error", error)
-    })
-    await sleep(85)
+    try {
+        await pool.execute(sql, [now])//, function(error, results) {
+    } catch(e) {
+        console.log("updateHeartbeat pool.execute Error:", e)
+    }
+    //await sleep(85)
 }
 
 async function procAlert(context, message) {
@@ -90,27 +92,21 @@ async function procAlert(context, message) {
 async function postAlert(uid, message, expires) {
     var sql = "INSERT INTO warn.alerts (uid, xml, expires, received) VALUES (?,?,?,?)"
     expires = moment(expires[0]).format(dbTimeFormat)
-    console.log("POSTING", uid)
-    pool.execute(sql, [uid, message, expires, now], function(error, results) {
-        if (error) {
-            console.log("postAlert pool.execute Error", error)
-            if (error.message.includes("Duplicate entry")) {
-                console.log("DUPLICATE", uid)
-                respond("200", "DUPLICATE " + uid)
-                return
-            } else {
-                console.log("ERROR", uid, error)
-                respond("500", "ERROR  " + uid + " " + error)
-                return
-            }
+    try {
+        await pool.execute(sql, [uid, message, expires, now])
+        console.log("ADDED", uid)
+        respond("200", "ADDED " + uid)
+        return
+    } catch(e) {
+        if (e.message.includes("Duplicate entry")) {
+            console.log("DUPLICATE", uid)
+            respond("200", "DUPLICATE " + uid)
         } else {
-            console.log("ADDED", uid)
-            respond("200", "ADDED " + uid)
-            return
+            console.log("ERROR", uid, e)
+            respond("500", "ERROR  " + uid + " " + e)
         }
-    })
-    // ensure time to complete
-    await sleep(490)
+        return
+    }
 }
 
 async function respond(status, uid) {
