@@ -15,7 +15,6 @@ const xml2js = require('xml2js')
 const mysql = require('mysql2/promise')
 const atob = require('atob')
 
-//var now
 var dbTimeFormat = "YYYY-MM-DD HH:mm:ssZ"
 
 var db_config = {
@@ -60,6 +59,7 @@ async function updateHeartbeat(now) {
     }
 }
 
+// process XML, get ready to post to DB
 async function procAlert(context, xml, callback) {
     var uid, alertExpires, ns
     xml2js.parseString(xml, function (err, result) {
@@ -87,6 +87,7 @@ async function procAlert(context, xml, callback) {
     return [uid, xml, alertExpires, callback]
 }
 
+// post XML and keys to DB
 async function postAlert(now, uid, xml, expires, callback) {
     var sql = "INSERT INTO warn.alerts (uid, xml, expires, received) VALUES (?,?,?,?)"
     var status, rsp = ""
@@ -107,8 +108,4 @@ async function postAlert(now, uid, xml, expires, callback) {
         }
     }
     return [status, rsp]
-}
-
-async function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
 }
