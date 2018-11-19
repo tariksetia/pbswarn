@@ -37,7 +37,6 @@ exports.handler = async (event, context, callback) => {
     var now = moment().format(dbTimeFormat)
     await updateHeartbeat(now)
     var message = atob(event.body64)  // 'body64' config'd in API GW Resources POST template
-    console.log("MESSAGE:", message)
     // if it's a labeled heartbeat message, short-cut out
     if (message == 'heartbeat') {
         console.log(message)
@@ -46,7 +45,6 @@ exports.handler = async (event, context, callback) => {
     } else {
         // send message to DB (dupes will be ignored)
         var [uid, xml, alertExpires, callback] = await procAlert(context, message, callback)
-        console.log("back from procAlert " + uid + " expires " + alertExpires)
         var [status, rsp] = await postAlert(now, uid, xml, alertExpires, callback)
         await callback(null, {statusCode:status, body:rsp})
     }
@@ -86,12 +84,10 @@ async function procAlert(context, xml, callback) {
             }
         }
     }) 
-    console.log("Returing expiration " + alertExpires)
     return [uid, xml, alertExpires, callback]
 }
 
 async function postAlert(now, uid, xml, expires, callback) {
-    console.log("now:", now)
     var sql = "INSERT INTO warn.alerts (uid, xml, expires, received) VALUES (?,?,?,?)"
     var status, rsp = ""
     expires = moment(expires[0]).format(dbTimeFormat)
