@@ -45,6 +45,7 @@ exports.handler = async (event, context, callback) => {
         // send message to DB (dupes will be ignored)
         var [uid, xml, alertExpires, callback] = await procAlert(context, message, callback)
         var [status, rsp] = await postAlert(now, uid, xml, alertExpires, callback)
+        rsp = now + rsp
         await callback(null, {statusCode:status, body:rsp})
     }
 }
@@ -59,7 +60,6 @@ async function updateHeartbeat(now) {
     }
 }
 
-// process XML, get ready to post to DB
 async function procAlert(context, xml, callback) {
     var uid, alertExpires, ns
     xml2js.parseString(xml, function (err, result) {
@@ -87,25 +87,25 @@ async function procAlert(context, xml, callback) {
     return [uid, xml, alertExpires, callback]
 }
 
-// post XML and keys to DB
 async function postAlert(now, uid, xml, expires, callback) {
     var sql = "INSERT INTO warn.alerts (uid, xml, expires, received) VALUES (?,?,?,?)"
     var status, rsp = ""
     expires = moment(expires[0]).format(dbTimeFormat)
     try {
         await pool.execute(sql, [uid, xml, expires, now])
-        var rsp = moment(now).format() + " ADDED " + uid
         status = "200"
+        var rsp = " ADDED " + uid
         console.log(status, rsp)
-        callback(null, {statusCode:"200", body:rsp})
     } catch(e) {
         if (e.message.includes("Duplicate entry")) {
-            var rsp = moment(now).format() + " DUPLICATE " + uid
+            status = "200"
+            var rsp = " DUPLICATE " + uid
             console.log(status, rsp)
         } else {
-            var rsp = moment(now).format() + " ERROR " + uid + " " + uid
+            status = "500"
+            var rsp = " ERROR " + uid + " " + uid
             console.log(status, rsp)
         }
     }
-    return [status, rsp]
+    return [status, rsp]  // status and response string will be returned to sender
 }
