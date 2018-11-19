@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.19 11/17/2018
+ *  Version 1.20 11/18/2018
  *
  *************************************************************/
 
@@ -15,9 +15,7 @@ const xml2js = require('xml2js')
 const mysql = require('mysql2/promise')
 const atob = require('atob')
 
-var now
-var callbackGlobal
-
+//var now
 var dbTimeFormat = "YYYY-MM-DD HH:mm:ssZ"
 
 var db_config = {
@@ -35,48 +33,50 @@ var pool = mysql.createPool(db_config)
 
 // on POST call
 exports.handler = async (event, context, callback) => {
-    callbackGlobal = callback
-    //console.log(callbackGlobal)
     context.callbackWaitsForEmptyEventLoop = false  // asynchronize the handler callback
-    //  update the heartbeat value on DB
-    now = moment().format(dbTimeFormat)
+    var now = moment().format(dbTimeFormat)
+    await updateHeartbeat(now)
     var message = atob(event.body64)  // 'body64' config'd in API GW Resources POST template
-    await updateHeartbeat()
+    console.log("MESSAGE:", message)
     // if it's a labeled heartbeat message, short-cut out
     if (message == 'heartbeat') {
-        respond("200", "heartbeat")
+        console.log(message)
+        await callback(null, {statusCode:"200", body:message})
         return
     } else {
-        // else process the POSTed XML
-        await procAlert(context, message)
-        return
+        // send message to DB (dupes will be ignored)
+        var [uid, xml, alertExpires, callback] = await procAlert(context, message, callback)
+        console.log("back from procAlert " + uid + " expires " + alertExpires)
+        var [status, rsp] = await postAlert(now, uid, xml, alertExpires, callback)
+        await callback(null, {statusCode:status, body:rsp})
     }
 }
 
-async function updateHeartbeat() {
+// update warn.heartbeat.latest in DB
+async function updateHeartbeat(now) {
     var sql = "UPDATE warn.heartbeat SET latest=? WHERE Id=1"
     try {
-        await pool.execute(sql, [now])//, function(error, results) {
+        await pool.execute(sql, [now])
     } catch(e) {
         console.log("updateHeartbeat pool.execute Error:", e)
     }
-    //await sleep(85)
 }
 
-async function procAlert(context, message) {
-    xml2js.parseString(message, function (err, result) {
+async function procAlert(context, xml, callback) {
+    var uid, alertExpires, ns
+    xml2js.parseString(xml, function (err, result) {
         if (err) console.log("XML2JS Error",err)
         // extract XML namespace
-        var ns = ""
+        ns = ""
         if (typeof result.alert.$.xmlns != 'undefined') {
             ns = result.alert.$.xmlns // the XML default namespace
         }
         // if it's a CAP message, post the new alert to DB
         if (ns == "urn:oasis:names:tc:emergency:cap:1.2") {
             var alert = result.alert
-            var uid = alert.identifier + "," + alert.sender + "," + alert.sent // per CAP spec
+            uid = alert.identifier + "," + alert.sender + "," + alert.sent // per CAP spec
             // extract the latest expires time across all Infos
-            var alertExpires = ""
+            alertExpires = ""
             if (typeof alert != 'undefined' && typeof alert.info != 'undefined') {
                 for (var info of alert.info) {
                     if (info.expires > alertExpires) {
@@ -84,33 +84,33 @@ async function procAlert(context, message) {
                     }
                 }
             }
-            postAlert(uid, message, alertExpires)
         }
-    })  
+    }) 
+    console.log("Returing expiration " + alertExpires)
+    return [uid, xml, alertExpires, callback]
 }
 
-async function postAlert(uid, message, expires) {
+async function postAlert(now, uid, xml, expires, callback) {
+    console.log("now:", now)
     var sql = "INSERT INTO warn.alerts (uid, xml, expires, received) VALUES (?,?,?,?)"
+    var status, rsp = ""
     expires = moment(expires[0]).format(dbTimeFormat)
     try {
-        await pool.execute(sql, [uid, message, expires, now])
-        console.log("ADDED", uid)
-        respond("200", "ADDED " + uid)
-        return
+        await pool.execute(sql, [uid, xml, expires, now])
+        var rsp = moment(now).format() + " ADDED " + uid
+        status = "200"
+        console.log(status, rsp)
+        callback(null, {statusCode:"200", body:rsp})
     } catch(e) {
         if (e.message.includes("Duplicate entry")) {
-            console.log("DUPLICATE", uid)
-            respond("200", "DUPLICATE " + uid)
+            var rsp = moment(now).format() + " DUPLICATE " + uid
+            console.log(status, rsp)
         } else {
-            console.log("ERROR", uid, e)
-            respond("500", "ERROR  " + uid + " " + e)
+            var rsp = moment(now).format() + " ERROR " + uid + " " + uid
+            console.log(status, rsp)
         }
-        return
     }
-}
-
-async function respond(status, uid) {
-    callbackGlobal(null, {"statusCode":status, "body":moment(now).format() + " " + uid})
+    return [status, rsp]
 }
 
 async function sleep(ms) {
