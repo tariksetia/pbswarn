@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.20 11/18/2018
+ *  Version 1.21 11/19/2018
  *
  *************************************************************/
 
@@ -35,11 +35,11 @@ exports.handler = async (event, context, callback) => {
     context.callbackWaitsForEmptyEventLoop = false  // asynchronize the handler callback
     var now = moment().format(dbTimeFormat)
     await updateHeartbeat(now)
-    var message = atob(event.body64)  // 'body64' config'd in API GW Resources POST template
+    var message = event.body
     // if it's a labeled heartbeat message, short-cut out
+    //console.log("Message:", message)
     if (message == 'heartbeat') {
-        console.log(message)
-        await callback(null, {statusCode:"200", body:message})
+        await callback(null, {statusCode:"200", body:'heartbeat'}) 
         return
     } else {
         // send message to DB (dupes will be ignored)
@@ -94,17 +94,14 @@ async function postAlert(now, uid, xml, expires, callback) {
     try {
         await pool.execute(sql, [uid, xml, expires, now])
         status = "200"
-        var rsp = " ADDED " + uid
-        console.log(status, rsp)
+        rsp = " ADD " + uid
     } catch(e) {
         if (e.message.includes("Duplicate entry")) {
             status = "200"
-            var rsp = " DUPLICATE " + uid
-            console.log(status, rsp)
+            rsp = " DUP " + uid
         } else {
             status = "500"
-            var rsp = " ERROR " + uid + " " + uid
-            console.log(status, rsp)
+            rsp = " ERROR " + uid + " " + e
         }
     }
     return [status, rsp]  // status and response string will be returned to sender
