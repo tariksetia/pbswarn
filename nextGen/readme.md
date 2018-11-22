@@ -1,2 +1,2 @@
 
-![alt text](diagram.png)
+![alt text](nextGen.png)
