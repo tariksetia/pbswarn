@@ -1,0 +1,37 @@
+﻿AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: An AWS Serverless Specification template describing your function.
+Resources:
+  warnmap:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: index.handler
+      Runtime: nodejs8.10
+      CodeUri: .
+      Description: ''
+      MemorySize: 128
+      Timeout: 3
+      Role: 'arn:aws:iam::751197549810:role/service-role/warn_lambda_role'
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /MyResource
+            Method: ANY
+        Api2:
+          Type: Api
+          Properties:
+            Path: /MyResource
+            Method: ANY
+        Api3:
+          Type: Api
+          Properties:
+            Path: /
+            Method: GET
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-00f52f8fd49d60d5c
+        SubnetIds:
+          - subnet-93248bda
+          - subnet-d337a2b4
+          - subnet-70d9d428
