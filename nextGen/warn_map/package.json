@@ -1,0 +1,16 @@
+{
+  "name": "warn_map",
+  "version": "1.0.0",
+  "description": "Generate JSON map data object for PBS WARN web map",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Art Botterell",
+  "license": "ISC",
+  "dependencies": {
+    "moment": "^2.22.2",
+    "mysql2": "^1.6.4",
+    "xml2js": "^0.4.19"
+  }
+}
