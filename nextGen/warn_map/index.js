@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.1 11/20/2018
+ *  Version 1.2 11/22/2018
  *
  *************************************************************/
 
@@ -62,9 +62,11 @@ const getHeartbeat = async () => {
 // return CAP XML alerts that haven't expired and haven't been replaced
 const getAlerts = async () => {
     var alerts = []
-    var sql = "SELECT * FROM warn.alerts"  // the SQL here needs completion <<<
+    var now = moment().format(dbTimeFormat)
+    var sql = "SELECT * FROM warn.alerts WHERE expires >  ? AND replacedBy IS NULL"
+    
     try {
-        var [rows,fields] = await pool.query(sql)
+        var [rows,fields] = await pool.query(sql, now)
         for (var i in rows) {
             alerts.push(rows[i].xml)
         }
@@ -101,76 +103,77 @@ const parseAlert = async (xml) => {
 const getJsonAlerts = async (alert) => {
     // grab Alert-level values
     var o = {} // holder for Alert-level values
-    o.identifier = alert.identifier
-    o.sender = alert.sender
-    o.sent = alert.sent
-    o.status = alert.status
-    o.msgType = alert.msgType
-    o.source = alert.source
-    o.scope = alert.scope
-    o.code = alert.code
+    o.ID = alert.identifier[0]
+    o.Sender = alert.sender[0]
+    o.Sent = alert.sent[0]
+    o.Status = alert.status[0]
+    o.MsgType = alert.msgType[0]
+    o.Source = alert.source[0]
+    o.Scope = alert.scope[0]
+    o.Code = alert.code[0]
     // for each info, create an alert object
     var infos = alert.info
     for (var i in infos) {
         var a = Object.assign({}, o)  // JSON of Info detail with Alert info included
         var info = infos[i]
-        a.language = info.language
-        a.category = info.category
-        a.event = info.event
-        a.responseType = info.responseType
-        a.urgency = info.urgency
-        a.severity = info.severity
-        a.certainty = info.certainty
-        a.eventCode = info.eventCode
-        a.effective = info.effective
-        a.expires = info.expires
-        a.senderName = info.senderName
-        a.headline = info.headline
-        a.description = info.description
-        a.instruction = info.instruction
-        a.web = info.web
+        a.Language = info.language[0]
+        a.Category = info.category[0]
+        a.Event = info.event[0]
+        a.ResponseType = info.responseType[0]
+        a.Urgency = info.urgency[0]
+        a.Severity = info.severity[0]
+        a.Certainty = info.certainty[0]
+        a.Levels = a.Urgency + "/" + a.Severity + "/" + a.Certainty
+        a.Event = info.eventCode[0]
+        a.Effective = info.effective[0]
+        a.Expires = info.expires[0]
+        a.Source = info.senderName[0]
+        a.Headline = info.headline[0]
+        a.Description = info.description[0]
+        a.Instruction = info.instruction[0]
+        a.Web = info.web[0]
         // scan Parameters for CMAMtext
         var parameter = info.parameter
         for (var i in parameter) {
             var p = parameter[i]
             if (p.valueName == "CMAMtext") {
-                a.CMAMtext = p.value
+                a.Cmam = p.value[0]
             }
         }
-        a.geocodes = []
-        a.polygons = []
-        a.circles = []
+        a.Geocodes = []
+        a.Polygons = []
+        a.Circles = []
         var areaDescs = []
         // for each area, accumulate the area description, polygons, circles, and geocodes
         for (var i in info.area) {
             var ar = info.area[i]
             areaDescs.push(ar.areaDesc)
             for (var i in ar.polygon) {
-                a.polygons.push(ar.polygon[i])
+                a.Polygons.push(ar.polygon[i])
             }
             for (var i in ar.circle) {
-                a.circles.push(ar.circle[i])
+                a.Circles.push(ar.circle[i])
             }
             for (var i in ar.geocode) {
                 var gc = ar.geocode[i]
                 if (gc.valueName == "SAME") {
-                    a.geocodes.push(gc.value)
+                    a.Geocodes.push(gc.value[0])
                 }
             }
         }
-        a.areaDesc = areaDescs.join(" / ")
+        a.AreaDesc = areaDescs.join(" / ")
         // if there are no polygons from the XML, look up polys for each FIPS/SAME code
         if (typeof info.area.polygon == 'undefined' || info.area.polygon == {}) {
             try {
-                var polys = await getPolygons(a.geocodes)  // gets back an array of polys
+                var polys = await getPolygons(a.Geocodes)  // gets back an array of polys
                 for (var i in polys) {
-                    a.polygons.push(polys[i])
+                    a.Polygons.push(polys[i])
                 }
             } catch (e) {
                 console.log("parseAlert getPolygons Error:", e)
             }
         } else {
-            a.polygons = info.area.polygon
+            a.Polygons = info.area.polygon
         }
     }
     return a
@@ -179,7 +182,7 @@ const getJsonAlerts = async (alert) => {
 const getPolygons = async (fips) => {
     var polys = []
     // fips is an array of SAME codes
-    var fips_chunks = chunkArrayInGroups(fips, 5)
+    console.log(fips)
     for (var i in fips) {
         var pp = await queryPolys(fips[i])
         for (var j in pp) {
@@ -211,12 +214,4 @@ const x2json = async (xml) => {
         json = result.alert
     })
     return json
-}
-
-const chunkArrayInGroups = (arr, size) => {
-    var myArray = []
-    for(var i = 0; i < arr.length; i += size) {
-        myArray.push(arr.slice(i, i+size))
-    }
-    return myArray;
 }
