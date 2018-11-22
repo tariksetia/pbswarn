@@ -1,0 +1,7 @@
+{
+    "lambda": {
+        "role": "warn_map-executor",
+        "name": "warn_map",
+        "region": "us-west-2"
+    }
+}
