@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.18 11/14/2018
+ *  Version 1.19 11/28/2018
  *
  *************************************************************/
 
@@ -52,7 +52,7 @@ const (
     dsn                     = "warn:warn@tcp(192.168.2.1:3306)/warn"
     dedupe = 20 // number of previous messages retained for look-back when filtering out duplicates
     dupeFile = "/home/pbs/.recent.alerts"
-    post_url = "https://94e38d27ol.execute-api.us-west-2.amazonaws.com/dev"
+    post_url = "https://94e38d27ol.execute-api.us-west-2.amazonaws.com/map"
 )
 
 type mapItem struct {
@@ -106,7 +106,6 @@ func messageProcessor(message []byte) {
 
     // take out any nulls, esp at start
     bytes.Trim(message, "\x00")
-    log.Println(string(message))
 
     // POST XML to new AWS API
     resp := postXml(message)
@@ -173,7 +172,7 @@ func messageProcessor(message []byte) {
         } else {
             // send it to the database
             go toDatabase(capString, &alert, receivedTime, expiresTime)
-            log.Println(alert.MessageStatus, alert.MessageType, alert.MessageID)
+            log.Println("Sent DB", alert.MessageStatus, alert.MessageType, alert.MessageID)
         }
     }
     inMessage = false // for benefit of packet scanner, go back to listening for next msg
@@ -201,10 +200,14 @@ func toDatabase(capString string, alert *cap.Alert, received string, expires str
         }
     } 
 
-    // check for explicit polygon in CAP message
+    // check for explicit polygon(s) in CAP message
     var poly = ""
-    if len(area.Polygon) > 0 {
-        poly = area.Polygon
+    if (area.Polygon != nil) {
+        try {
+            poly = area.Polygon[0]
+        } catch (e) {
+            log.Println("toDatabase get polygon", e)
+        }
     }
 
     // FOR TEST
@@ -336,7 +339,6 @@ func check(err error) {
 
 func postXml(message []byte) *http.Response {
     
-	//log.Println("Sent",string(message))
 	req, _ := http.NewRequest("POST", post_url, bytes.NewBuffer(message))
 	req.Header.Set("Content-Type", "application/xml")
 	client := &http.Client{}
@@ -351,6 +353,7 @@ func postXml(message []byte) *http.Response {
     if err != nil {
         fmt.Println(resp.StatusCode, "-", string(body))
         // if error, pause and retry
+
 
         return resp
     } else {
