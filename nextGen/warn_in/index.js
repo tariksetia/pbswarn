@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.21 11/19/2018
+ *  Version 1.22 11/28/2018
  *
  *************************************************************/
 
@@ -50,6 +50,7 @@ exports.handler = async (event, context, callback) => {
     }
 }
 
+
 // update warn.heartbeat.latest in DB
 async function updateHeartbeat(now) {
     var sql = "UPDATE warn.heartbeat SET latest=? WHERE Id=1"
@@ -63,7 +64,10 @@ async function updateHeartbeat(now) {
 async function procAlert(context, xml, callback) {
     var uid, alertExpires, ns
     xml2js.parseString(xml, function (err, result) {
-        if (err) console.log("XML2JS Error",err)
+        if (err) {
+            console.log("procAlert xml2js Error",err)
+            return
+        }
         // extract XML namespace
         ns = ""
         if (typeof result.alert.$.xmlns != 'undefined') {
@@ -73,7 +77,16 @@ async function procAlert(context, xml, callback) {
         if (ns == "urn:oasis:names:tc:emergency:cap:1.2") {
             var alert = result.alert
             uid = alert.identifier + "," + alert.sender + "," + alert.sent // per CAP spec
-            // extract the latest expires time across all Infos
+            // If Update or Cancel, mark each of the referenced messages as replaced
+            if (alert.msgType == "Cancel" || alert.msgType == "Update") {
+                var references = alert.references.split(" ")
+                for (var i in references) {
+                    var target = references[i]
+                    // fire-forget an sql call to update the target record
+                    replaced(target, uid)
+                }
+            }
+            // Now extract the latest expires time across all Infos
             alertExpires = ""
             if (typeof alert != 'undefined' && typeof alert.info != 'undefined') {
                 for (var info of alert.info) {
@@ -105,4 +118,14 @@ async function postAlert(now, uid, xml, expires, callback) {
         }
     }
     return [status, rsp]  // status and response string will be returned to sender
+}
+
+async function replaced(target, uid) {
+    var sql = 'UPDATE warn.alerts SET replacedBy = ? WHERE uid = ?'
+    try {
+        pool.execute(sql, [uid, target])
+        console.log("REPLACEMENT for ", target)
+    } catch (e) {
+        console.log("replaced() Error", e)
+    }
 }
