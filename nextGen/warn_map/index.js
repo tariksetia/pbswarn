@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.2 11/22/2018
+ *  Version 1.5 11/28/2018
  *
  *************************************************************/
 
@@ -63,7 +63,7 @@ const getHeartbeat = async () => {
 const getAlerts = async () => {
     var alerts = []
     var now = moment().format(dbTimeFormat)
-    var sql = "SELECT * FROM warn.alerts WHERE expires >  ? AND replacedBy IS NULL"
+    var sql = "SELECT * FROM warn.alerts WHERE expires >  ? AND replacedBy IS NULL ORDER BY received DESC"
     
     try {
         var [rows,fields] = await pool.query(sql, now)
@@ -91,7 +91,7 @@ const parseAlert = async (xml) => {
             console.log("parseAlert Error: namespace is null")
         }
     } else {
-        console.log("parseAlert Error: returned JSON object empty")
+        console.log("parseAlert Error: returned JSON object is empty")
     }
     // if it's a CAP message, create a JSON object for each Info
     if (ns == "urn:oasis:names:tc:emergency:cap:1.2") {
@@ -108,36 +108,70 @@ const getJsonAlerts = async (alert) => {
     o.Sent = alert.sent[0]
     o.Status = alert.status[0]
     o.MsgType = alert.msgType[0]
-    o.Source = alert.source[0]
-    o.Scope = alert.scope[0]
-    o.Code = alert.code[0]
+    if (typeof alert.source != 'undefined') {
+        o.Source = alert.source[0]
+    }
+    if (typeof alert.scope != 'undefined') {
+        o.Scope = alert.scope[0]
+    }
+    if (typeof alert.code != 'undefined') {
+        o.Code = alert.code[0]
+    }
     // for each info, create an alert object
     var infos = alert.info
     for (var i in infos) {
         var a = Object.assign({}, o)  // JSON of Info detail with Alert info included
         var info = infos[i]
-        a.Language = info.language[0]
-        a.Category = info.category[0]
-        a.Event = info.event[0]
-        a.ResponseType = info.responseType[0]
+        if (typeof info.language != 'undefined') {
+            a.Language = info.language[0]
+        }
+        if (typeof info.category != 'undefined') {
+            a.Category = info.category[0]
+        }
+        if (typeof info.event != 'undefined') {
+            a.Event = info.event[0]
+        }
+        if (typeof info.responseType != 'undefined') {
+            a.ResponseType = info.responseType[0]
+        }
         a.Urgency = info.urgency[0]
         a.Severity = info.severity[0]
         a.Certainty = info.certainty[0]
-        a.Levels = a.Urgency + "/" + a.Severity + "/" + a.Certainty
-        a.Event = info.eventCode[0]
-        a.Effective = info.effective[0]
+        //a.Levels = a.Urgency + "/" + a.Severity + "/" + a.Certainty
+        if (typeof info.eventCode != 'undefined') {
+            a.EventCode = info.eventCode[0]
+        }
+        if (typeof info.effective != 'undefined') {
+            a.Effective = info.effective[0]
+        }
         a.Expires = info.expires[0]
-        a.Source = info.senderName[0]
-        a.Headline = info.headline[0]
-        a.Description = info.description[0]
-        a.Instruction = info.instruction[0]
-        a.Web = info.web[0]
+        if (typeof info.senderName != 'undefined') {
+            a.Source = info.senderName[0]
+        }
+        if (typeof info.headline != 'undefined') {
+            a.Headline = info.headline[0]
+        }
+        if (typeof info.description != 'undefined') {
+            a.Description = info.description[0]
+        } else {
+            a.Description = ""
+        }
+        if (typeof info.instruction != 'undefined') {
+            a.Instruction = info.instruction[0]
+        } else {
+            a.Instruction = ""
+        }
+        if (typeof info.web != 'undefined') {
+            a.Web = info.web[0]
+        }
         // scan Parameters for CMAMtext
-        var parameter = info.parameter
-        for (var i in parameter) {
-            var p = parameter[i]
-            if (p.valueName == "CMAMtext") {
-                a.Cmam = p.value[0]
+        if (typeof info.parameter != 'undefined') {
+            var parameter = info.parameter
+            for (var i in parameter) {
+                var p = parameter[i]
+                if (p.valueName == "CMAMtext") {
+                    a.Cmam = p.value[0]
+                }
             }
         }
         a.Geocodes = []
@@ -145,25 +179,27 @@ const getJsonAlerts = async (alert) => {
         a.Circles = []
         var areaDescs = []
         // for each area, accumulate the area description, polygons, circles, and geocodes
-        for (var i in info.area) {
-            var ar = info.area[i]
-            areaDescs.push(ar.areaDesc)
-            for (var i in ar.polygon) {
-                a.Polygons.push(ar.polygon[i])
-            }
-            for (var i in ar.circle) {
-                a.Circles.push(ar.circle[i])
-            }
-            for (var i in ar.geocode) {
-                var gc = ar.geocode[i]
-                if (gc.valueName == "SAME") {
-                    a.Geocodes.push(gc.value[0])
+        if (typeof info.area != 'undefined') {
+            for (var i in info.area) {
+                var ar = info.area[i]
+                areaDescs.push(ar.areaDesc)
+                for (var i in ar.polygon) {
+                    a.Polygons.push(ar.polygon[i])
+                }
+                for (var i in ar.circle) {
+                    a.Circles.push(ar.circle[i])
+                }
+                for (var i in ar.geocode) {
+                    var gc = ar.geocode[i]
+                    if (gc.valueName == "SAME") {
+                        a.Geocodes.push(gc.value[0])
+                    }
                 }
             }
         }
         a.AreaDesc = areaDescs.join(" / ")
         // if there are no polygons from the XML, look up polys for each FIPS/SAME code
-        if (typeof info.area.polygon == 'undefined' || info.area.polygon == {}) {
+        if (typeof ar.polygon == 'undefined' || ar.polygon.length == 0) {
             try {
                 var polys = await getPolygons(a.Geocodes)  // gets back an array of polys
                 for (var i in polys) {
@@ -173,16 +209,22 @@ const getJsonAlerts = async (alert) => {
                 console.log("parseAlert getPolygons Error:", e)
             }
         } else {
-            a.Polygons = info.area.polygon
+            a.Polygons = ar.polygon
         }
     }
     return a
 }
 
+// safe individual value transfer between objects
+const assign = (source, target) => {
+    if (typeof source != 'undefined') {
+        target = source
+    }
+}
+
 const getPolygons = async (fips) => {
     var polys = []
     // fips is an array of SAME codes
-    console.log(fips)
     for (var i in fips) {
         var pp = await queryPolys(fips[i])
         for (var j in pp) {
