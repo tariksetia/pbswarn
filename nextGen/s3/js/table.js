@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.19 12/8/2018
+ *  Version 1.20 12/13/2018
  *
  *************************************************************/
 
@@ -41,70 +41,54 @@ const itemVisible = () => {
 }
 
 // once we have data, set up the table
-var tableLoaded = false;
 var dataTable;
 
 const updateTable = () => {
-    if (!tableLoaded) {  // if startup, init dataTable
-        if ($(window).width() > 999) {
-            showList()
+
+    var table = document.getElementById("listTable")
+    // get reference to table body element and empty it
+    var tbody = document.getElementById('table_body')
+    while (tbody.firstChild) {
+        tbody.removeChild(tbody.firstChild);
+    }
+    // for each alert, add a row to the table
+    alerts.forEach(row => {
+        if (row.Headline !=null && row.Headline.length > 0) {
+            slug = row.Headline
+        } else {
+            slug = row.Cmam
         }
-        tableLoaded = true;
-        dataTable = $('#table').DataTable( {
-            data: alerts,
-            paging: false,
-            info:false,
-            fixedHeader: {
-                header: false,
-                footer: true
-            },
-            searching: false,
-            order: [],
-            columns: [
-                { render: function (data, type, row) {
-                        if (row.Headline !=null && row.Headline.length > 0) {
-                            slug = row.Headline
-                        } else {
-                            slug = row.Cmam
-                        }
-                        if (typeof(slug) != 'undefined') {
-                            if (slug.length > 80) { slug = slug.substring(0,77) + "..." }
-                        }
-                        snt = row.Sent.replace("T", " at ");
-                        response = row.ResponseType;
-                        if (response == "") { response = "Alert"}
-                        severity = row.Severity
-                        if (severity == "") { severity="Unknown"}
-                        color = getColor(row)
-                        cell = `
-<div class="${severity }">
+        if (typeof(slug) != 'undefined') {
+            if (slug.length > 80) { slug = slug.substring(0,77) + "..." }
+        }
+        snt = row.Sent.replace("T", " at ");
+        response = row.ResponseType;
+        if (response == "") { response = "Alert"}
+        severity = row.Severity
+        if (severity == "") { severity="Unknown"}
+        color = getColor(row)
+        var cell = `<tr>
+<td >
+<div id="table_cell" class="${severity }">
     <div>
         <span class="response">${response}</span>
         <span class="headline">${slug} </span>
     </div>
     <div class="origin">From ${row.Source} on ${snt}</div>
 </div>
-`
-                        return cell
-                    }
-                }
-            ]
-        });
-        // set a click handler on this table row
-        $('#table').on('click', 'tr', function () {
-            var item = dataTable.row( this ).data()
-            // zoom the map to (aggregate) bounds of the alert's polys
-            if (typeof(typed) != "undefined") {
-                focusOn(item)
-                //polygons = item.Polygons
-                viewAlert(item)
-            }
-        } );
-    } else {  // existing dataTable, reload latest data
-        dataTable.clear()
-        dataTable.rows.add(alerts)
-        dataTable.draw()
-    }
+</td>
+</tr>`
+        // add row to the table with click handler
+        tbody.insertAdjacentHTML("beforeend", cell) 
+        var thisRow = tbody.lastElementChild
+        thisRow.addEventListener('click', function(event) {
+            hideScroll()
+            focusOn(row)
+            viewAlert(row)
+        })
+
+    });
+
 }
 
 // get the severity-based color value for an alert
