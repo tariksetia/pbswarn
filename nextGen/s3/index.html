@@ -6,7 +6,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.19 12/8/2018
+ *  Version 1.20 12/13/2018
  *
  *************************************************************/
 -->
@@ -20,13 +20,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.0/jquery-confirm.min.css">
     <script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css" />
-    <script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
-    <link rel="stylesheet" href="css/jquery.dataTables.css" />
     <script src="https://cdn.jsdelivr.net/npm/typed.js@2.0.9"></script>  
     <link rel="stylesheet" href="css/map.css">
   </head>
   <body >
-        <div id="main"> 
+    <div id="main"> 
 
       <!-- The base map -->
       <div id="map" class="map" tabindex="0"></div>
@@ -51,9 +49,8 @@
 
         <!-- The List table --> 
         <div id="table_window">
-        <table id="table" class="display">
-            <thead></thead>
-            <tbody></tbody>
+        <table id="listTable">
+            <tbody id="table_body"></tbody>
         </table>
         </div>
 
