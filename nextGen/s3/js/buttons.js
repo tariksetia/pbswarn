@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.19 12/8/2018
+ *  Version 1.20 12/13/2018
  *
  *************************************************************/
 
@@ -44,7 +44,7 @@ $('#scrollBtn').click(function(){
     } else {
         consoleBG.style.display="block"
         showScroll()
-        typeNextAlert()
+        showNextAlert()
     }
 })
 
@@ -57,7 +57,7 @@ tableBtn.onmouseout = function(){
     tableBtn.style.fontWeight = 'normal';
 }
 $('#tableBtn').click(function(){
-    if (tableBG.style.display == "block") {
+    if (listing) {
         hideList()
     } else {
         showList()
