@@ -4,23 +4,27 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.19 12/8/2018
+ *  Version 1.20 12/13/2018
  *
  *************************************************************/
 
 // application globals
-var alerts
+var alerts = []
 var map
+var markerGroup
+var polyGroup
+var center
 
 var scanning = true
-var listing = true
+var listing = false
 var viewing = false
+var tableLoaded = false
 
-var consoleBG = document.getElementById('console_bg');
-var consoleWindow = document.getElementById('console_window');
-var consoleText = document.getElementById('console_text');
-var tableBG = document.getElementById('table_window')
-var tableDisp = document.getElementById('table_display')
+const consoleBG = document.getElementById('console_bg');
+const consoleWindow = document.getElementById('console_window');
+const consoleText = document.getElementById('console_text');
+const tableBG = document.getElementById('table_window')
+const tableDisp = document.getElementById('table_display')
 
 const extreme = "#ff9999"
 const severe = "#f2e765"
@@ -28,143 +32,151 @@ const moderate = "#88ffff"
 const minor = "#99ff99"
 const unknown = "#ffffff"
 
-var plot 
-
-String.prototype.replaceAll = function(search, replacement) {
+String.prototype.replaceAll = function (search, replacement) {
     return String.prototype.replace(new RegExp(search, 'g'), replacement);
 };
-
-var markerGroup
-var polyGroup
 
 // set up the map
 const initMap = () => {
     var centerLat, centerLon, defaultZoom
-    map = L.map('map',zoomDelta=0.1).setView([39.833, -98.583], 4.2)
-    if (localStorage.defaultBounds) resetView()
-    var center
-    // load colored pins for severity indication
-    var extremeIcon = L.icon({
-        iconUrl: 'img/extremeIcon.png',
-        iconSize: [18,18],
-        iconAnchor: [9,18],
-        popupAnchor: [18,9]
-    });
-    var severeIcon = L.icon({
-        iconUrl: 'img/severeIcon.png',
-        iconSize: [18,18],
-        iconAnchor: [9,18],
-        popupAnchor: [18,9]
-    });
-    var moderateIcon = L.icon({
-        iconUrl: 'img/moderateIcon.png',
-        iconSize: [18,18],
-        iconAnchor: [9,18],
-        popupAnchor: [18,9]
-    });
-    var minorIcon = L.icon({
-        iconUrl: 'img/minorIcon.png',
-        iconSize: [18,18],
-        iconAnchor: [9,18],
-        popupAnchor: [18,9]
-    });
-    var unknownIcon = L.icon({
-        iconUrl: 'img/unknownIcon.png',
-        iconSize: [18,18],
-        iconAnchor: [9,18],
-        popupAnchor: [18,9]
-    });
-
+    map = L.map('map', zoomDelta = 0.1).setView([39.833, -98.583], 4.2)
     // add the base map from OSM tile server
     L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
         attribution: 'Map &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors | Wireless Emergency Alerts from PBS WARN @ KVIE, Sacramento\n'
     }).addTo(map);
-
     markerGroup = L.layerGroup().addTo(map)
     polyGroup = L.layerGroup().addTo(map)
+}
 
-    // plot an alert on the map
-    plot = alert => {
-        var popup = make_text(alert)
-        tiptext = alert.Cmam
-        if (tiptext == '') {
-            tiptext = alert.Headline
-        }
-        polygons = alert["Polygons"]
-        center = getCenterOf(alert)
-        color = getColor(alert);
-        if (polygons.length > 0) {  // if there's no polygon by now, skip plotting
-            for (var i = 0; i<polygons.length; i++) {
-                reformat_polygon(polygons[i], color, alert)
-            }
-            var label = alert["ResponseType"]
-            if (label == "") { abel = "Alert"  }
-            if (alert.Status == "Test") { label = "TEST" }
-            if (alert.Status == "Exercise") { label = "EXERCISE" }
-            // style icon and label per alert severity
-            sev = alert.Severity
-            iClass = "alertIconUnknown"
-            icon = "unknownIcon"
-            if (sev.includes("Extreme")) { iClass = "alertIconExtreme"; icon = extremeIcon }
-            if (sev.includes("Severe")) { iClass = "alertIconSevere"; icon = severeIcon}
-            if (sev.includes("Moderate")) {iClass = "alertIconModerate"; icon = moderateIcon}
-            if (sev.includes("Minor")) {iClass = "alertIconMinor"; icon = minorIcon}
-            var myIcon = L.divIcon({className: iClass, iconSize: null, html: label})
-            var label = L.marker( center, {icon: myIcon}).addTo(map).addTo(markerGroup)
-            marker = L.marker(center, {icon: icon}).addTo(map).addTo(markerGroup)
-            marker.addEventListener("click", function(event) {
-                viewAlert(alert)
-                focusOn(alert)
-            })
-            label.addEventListener("click", function(event) {
-                viewAlert(alert)
-                focusOn(alert)
-            })
-            marker.bindTooltip(tiptext);
+// plot an alert on the map
+plot = alert => {
+    //var popup = make_text(alert)
+    polygons = alert.Polygons
+    center = getCenterOf(alert)
+    color = getColor(alert);
+    if (polygons.length > 0) { 
+        for (var i = 0; i < polygons.length; i++) {
+            var poly = make_polygon(polygons[i], color, alert)
+            poly.addTo(map).addTo(polyGroup);
+            poly.on("click", function (event) { viewAlert(alert); })
         }
     }
+    if (alert.Circles.length > 0) {
+        for (var i = 0; i < alert.Circles.length; i++) {
+            var circ = make_circle(alert.Circles[i], color, alert)
+            circ.on("click", function (event) { viewAlert(alert); })
+        }
+    }
+    // add marker and label "flag" to map
+    make_label(alert).addTo(map).addTo(markerGroup)
+    make_marker(alert).addTo(map).addTo(markerGroup)
+}
+
+// make a label
+const make_label = alert => {
+    var center = getCenterOf(alert)
+    var label = "Alert"
+    if (typeof(alert.ResponseType) != "undefined") {
+        label = alert.ResponseType
+    }
+    if (alert.Status == "Test") label = "TEST" 
+    if (alert.Status == "Exercise") abel = "EXERCISE"
+    iClass = "alertIconUnknown"
+    if (typeof(alert.Severity) != "undefined") {
+        iClass = "alertIcon" + alert.Severity
+    }
+    var myIcon = L.divIcon({ className: iClass, iconSize: null, html: label })
+    var label = L.marker(center, { icon: myIcon })
+    label.addEventListener("click", function (event) {
+        viewAlert(alert)
+        focusOn(alert)
+    })
+    return label
+}
+
+// make a marker
+const make_marker = alert => {
+    var center = getCenterOf(alert)
+    tiptext = alert.Headline
+    if (typeof(alert.Cmam) != "undefined") {
+        tiptext = alert.Cmam
+    }
+    var icon = make_icon("unknown")
+    if (typeof(alert.Severity) != "undefined") {
+        icon = make_icon(alert.Severity.toLowerCase())
+    }
+    marker = L.marker(center, { icon: icon })
+    marker.addEventListener("click", function (event) {
+        viewAlert(alert)
+        focusOn(alert)
+    })
+    marker.bindTooltip(tiptext);
+    return marker
+}
+
+const make_icon = severity => {
+    var png = 'img/'+severity+'Icon.png'
+    return L.icon({
+        iconUrl: png,
+        iconSize: [18, 18],
+        iconAnchor: [9, 18],
+        popupAnchor: [18, 9]
+    })
 }
 
 // get center point of supplied alert
 const getCenterOf = item => {
     var bounds = getBounds(item.Polygons[0])
-    for (var i=1;i<item.Polygons.length; i++) {
-        bounds.extend( getBounds(item.Polygons[i]))
+    for (var i = 1; i < item.Polygons.length; i++) {
+        bounds.extend(getBounds(item.Polygons[i]))
+    }
+    for (var i = 1; i < item.Circles.length; i++) {
+        bounds.extend(getBounds(item.Circles[i]))
     }
     centerLatLng = L.latLng(bounds.getCenter().lat, bounds.getCenter().lng)
     return centerLatLng
 }
 
-// translate CAP polygon to Leaflet polygon object
-const reformat_polygon = (polygon, color, alert) => {
+// transform CAP polygon to Leaflet polygon object
+const make_polygon = (polygon, color, alert) => {
     new_polygon = []
     var lat, lon
-    if (typeof(polygon) == "string") { // if polygon is a new-style string
+    if (typeof (polygon) == "string") { // if polygon is a new-style string
         points = polygon.split(" ")
-        for (var i=0;i<points.length;i++) {
+        for (var i = 0; i < points.length; i++) {
             var point = points[i]
             splitp = point.split(",")
-            lat = splitp[0]
-            lon = splitp[1]
-            point = [parseFloat(lat),parseFloat(lon)]
-            new_polygon.push(point )
+            point = [parseFloat(splitp[0]), parseFloat(splitp[1])]
+            new_polygon.push(point)
         };
     } else {
         points = polygon;
-        for (var j = 0; j<points.length; j++) {
+        for (var j = 0; j < points.length; j++) {
             lat = points[j][0]
             lon = points[j][1]
-            new_polygon.push(L.latLng(lat, lon ))
+            new_polygon.push(L.latLng(lat, lon))
         }
     }
-    thisPoly = L.polygon(new_polygon, {
-                            color: color,
-                            fillOpacity: 0.4,
-                            opacity: 0.8,
-                        }).addTo(map).addTo(polyGroup);
-    thisPoly.on("click", function(event) { viewAlert(alert); })
-    center = thisPoly.getCenter()  // coordinates for icon
-    return thisPoly
+    return L.polygon(new_polygon, {
+        color: color,
+        fillOpacity: 0.4,
+        opacity: 0.8,
+    })
+}
+
+// transform CAP circle into Leaflet circle object
+const make_circle = (circle, color, alert) => {
+    var elements = circle.split(" ")
+    var point = elements[0]
+    var radius = elements[1] * 1000 // scale to meters
+    splitp = point.split(",")
+    lat = splitp[0]
+    lon = splitp[1]
+    return L.circle([parseFloat(lat), parseFloat(lon)], radius, {
+        color: color,
+        fillOpacity: 0.4,
+        opacity: 0.8,
+    })
 }
 
 // create a Leaflet LatLngBounds object from a CAP-format (lat,lon lat,lon...) polygon string
@@ -172,7 +184,7 @@ const getBounds = polygon => {
     var new_poly = []
     points = polygon.split(" ")
     // reverse lon/lat to lat/lon
-    for(var i = 0; i<points.length; i++)  {
+    for (var i = 0; i < points.length; i++) {
         point = points[i]
         here = L.latLng(point.split(","))
         new_poly.push(here)
@@ -180,44 +192,46 @@ const getBounds = polygon => {
     return L.polygon(new_poly).getBounds()
 }
 
-// get aggregate bounds of all polys in an item
+// get aggregate bounds of all polys and circles in an item
 const itemBounds = item => {
     var bounds = getBounds(item.Polygons[0])
-    for (var i=1;i<item.Polygons.length; i++) {
-        bounds.extend( getBounds(item.Polygons[i]) )
+    for (var i = 1; i < item.Polygons.length; i++) {
+        bounds.extend(getBounds(item.Polygons[i]))
+    }
+    for (var i = 1; i < item.Circles.length; i++) {
+        bounds.extend(getBounds(item.Circles[i]))
     }
     return bounds
 }
 
-// get aggregate bounds of all items in alerts
+// get aggregate bounds of all alerts
 const allBounds = alerts => {
-    if (typeof(alerts) != 'undefined') {
+    if (typeof (alerts) != 'undefined') {
         var abounds = itemBounds(alerts[0]);
         if (alerts.length > 1) {
-            for (var i=1;i<alerts.length; i++) {
+            for (var i = 1; i < alerts.length; i++) {
                 abounds.extend(itemBounds(alerts[i]))
             }
         }
         return abounds
-    } else {
-        return null
-    }
+    } else return null
 }
 
 // zoom the map to feature the selected JSON alert
 const focusOn = item => {
-    if (typeof(item) != "undefined") {
+    if (typeof (item) != "undefined") {
         bounds = itemBounds(item)
         // if text being displayed, shift the map to a better position on the screen
         if (scanning || viewing) {
-            map.fitBounds(shiftBounds(bounds))
+            map.fitBounds(offsetBounds(bounds.pad(0.3)))
         } else {
             map.fitBounds(bounds.pad(0.3))
         }
     }
 }
 
-const shiftBounds = bounds => {
+// shift map viewport to place alert in right half of screen
+const offsetBounds = bounds => {
     // calculate new center point
     var centerLon = bounds.getWest()
     var originalWidth = Math.abs(bounds.getWest() - bounds.getEast())
@@ -238,10 +252,6 @@ const clearMap = () => {
     polyGroup.clearLayers()
 }
 
-const updateMap = () => {
-    if (!scanning && !viewing) redrawMap()
-}
-
 const redrawMap = () => {
     clearMap()
     for (var i in alerts) {
@@ -253,11 +263,11 @@ const redrawMap = () => {
 const resetView = evt => {
     try {
         mbdict = JSON.parse(localStorage.defaultBounds)
-        var swLatLng = L.latLng([mbdict["_southWest"]["lat"],mbdict["_southWest"]["lng"]])
-        var neLatLng = L.latLng([mbdict["_northEast"]["lat"],mbdict["_northEast"]["lng"]])
+        var swLatLng = L.latLng([mbdict["_southWest"]["lat"], mbdict["_southWest"]["lng"]])
+        var neLatLng = L.latLng([mbdict["_northEast"]["lat"], mbdict["_northEast"]["lng"]])
         mbounds = L.latLngBounds(swLatLng, neLatLng)
         map.fitBounds(mbounds)
-    } catch {}
+    } catch { }  // if no viewport saved, do nothing
 }
 
 // save current viewport parameters to LocalStorage
