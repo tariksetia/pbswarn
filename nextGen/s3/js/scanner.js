@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.19 12/8/2018
+ *  Version 1.20 12/13/2018
  *
  *************************************************************/
 
@@ -30,26 +30,26 @@ const showScroll = () => {
     tableDisp.style.display = "none"
     $('#scrollBtn').html('Scanner Off')
     scanning = true
+    viewing = false
 }
 
 const updateScanner = () => { // called when new data arrives
-    // if we're not actively typing and if scanner is active, start typing alerts
-    if ( typeof(typed) == "undefined") {
+    // if we're not already typing and if scanner is active, type next alert
+    if ( typeof(typed) == "undefined" && scanning) {
         messagePointer = 0
-        if (scanning) typeNextAlert()
+        showNextAlert()
     }
 }
 
 // type the alerts in rotation in sliding div id="console_text"
-const typeNextAlert = () => {
-    if (typeof(alerts) != "undefined" && alerts.length > 0) {
+const showNextAlert = () => {
+    if (alerts.length > 0) {
         if (messagePointer >= alerts.length) messagePointer = 0
         alert = alerts[messagePointer]
         showScroll()
         clearMap()
-        focusOn(alert)
         plot(alert)
-        consoleBG.style.backgroundColor = "#ffffffdd"
+        focusOn(alert)
         typeAlert(alert)
         messagePointer++
     } else {
@@ -58,15 +58,17 @@ const typeNextAlert = () => {
         consoleBG.style.backgroundColor="transparent"
         msgId.style.backgroundColor = "#fff"
         msgId.style.display="block"
-        resetView()
+        //resetView()
+        redrawMap()
     }
 }
 
-// type out an individual alert, call typeNextAlert() again when complete
+// type out an individual alert, call showNextAlert() again when complete
 const typeAlert = alert => { 
     if (typeof(typed) != "undefined") {  // kill any still-running typer
         typed.destroy()
     }
+    consoleBG.style.backgroundColor = "#ffffffdd"
     consoleText.textContent = ""
     $("#msgId").html("Alert " + (messagePointer + 1) + " of " + alerts.length)
     clr = getColor(alert) + "aa"
@@ -84,9 +86,9 @@ const typeAlert = alert => {
             setTimeout(function(){
                 typed.destroy();
                 $("#console_text").css('top',0)
-                typeNextAlert()
+                showNextAlert()
             },
-            2000)   
+            1500)   
         }
     })
 }
@@ -116,7 +118,7 @@ const make_text = alert => {
 <p><font size="+1">${heading}</font></p>
 <small>
 <p> ${alert.Urgency} / ${alert.Severity} / ${alert.Certainty}&nbsp;&mdash;&nbsp;${alert.ResponseType}</p>
-<p>WEA Text:&nbsp;&nbsp;<i>${alert.Cmam}</i></p>
+<p>WEA Text:&nbsp;<i>${alert.Cmam}</i></p>
 </small>
 <p>${alert.Description}</p>
 <p>${alert.Instruction}</p>
