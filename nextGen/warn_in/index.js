@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.22 11/28/2018
+ *  Version 1.23 12/18/2018
  *
  *************************************************************/
 
@@ -65,7 +65,7 @@ async function procAlert(context, xml, callback) {
     var uid, alertExpires, ns
     xml2js.parseString(xml, function (err, result) {
         if (err) {
-            console.log("procAlert xml2js Error",err)
+            console.log("xml2js Error",err)
             return
         }
         // extract XML namespace
@@ -79,11 +79,13 @@ async function procAlert(context, xml, callback) {
             uid = alert.identifier + "," + alert.sender + "," + alert.sent // per CAP spec
             // If Update or Cancel, mark each of the referenced messages as replaced
             if (alert.msgType == "Cancel" || alert.msgType == "Update") {
-                var references = alert.references.split(" ")
-                for (var i in references) {
-                    var target = references[i]
-                    // fire-forget an sql call to update the target record
-                    replaced(target, uid)
+                if (typeof(alert.references) == "string") {
+                    var references = alert.references.split(" ")
+                    for (var i in references) {
+                        var target = references[i]
+                        // fire-forget an sql call to update the target record
+                        replaced(target, uid)
+                    }
                 }
             }
             // Now extract the latest expires time across all Infos
@@ -103,7 +105,11 @@ async function procAlert(context, xml, callback) {
 async function postAlert(now, uid, xml, expires, callback) {
     var sql = "INSERT INTO warn.alerts (uid, xml, expires, received) VALUES (?,?,?,?)"
     var status, rsp = ""
-    expires = moment(expires[0]).format(dbTimeFormat)
+    try {
+        expires = moment(expires[0]).format(dbTimeFormat)
+    } catch (e) {
+        console.log("postAlert expires =", expires, "for", uid)
+    }
     try {
         await pool.execute(sql, [uid, xml, expires, now])
         status = "200"
