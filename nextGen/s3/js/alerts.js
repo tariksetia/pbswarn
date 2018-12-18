@@ -4,13 +4,15 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.19 12/8/2018
+ *  Version 1.20 12/13/2018
  *
  *************************************************************/
 
 /////////////////////////////////////////////////////
 // Data Feed from server
-//////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
+
+var active = false
 
 const poll = () => {
     try {
@@ -37,15 +39,20 @@ const success = data => {
         return
     }
     // update the heartbeat display
-    $('#hb').html("Link up " + j.heartbeat)
+    $('#hb').html("Link up " + j.heartbeat.replace(" ", " / "))
     // and make array of alerts global
     alerts = j.alerts
-    // tell dataTable and scroller to update (from global 'alerts' object)
+    // tell List and Scanner to update themselves from global 'alerts' object
     updateTable()
     updateScanner()
-    if (!scanning && !viewing) {
-        updateMap()
-    }    
+    // if changing to no current alerts, reset map to default view
+    if (active && alerts.length == 0) {
+        resetView()
+        active = false
+    }
+    if (alerts.length > 0) active = true
+    // if not viewing or scanning, clear plots and replot
+    if (!scanning && !viewing) redrawMap()
 }
 
 // when page and scripts are loaded, set up the map, start polling for alerts
@@ -55,10 +62,10 @@ $(window).on('load', function() {
         hideScroll()
         hideList()
     } else {
-        showScroll()
         showList()
+        showScroll()
     }
-    setInterval(poll, 10000)
+    setInterval(poll, 15000)
     poll()
 })
 
