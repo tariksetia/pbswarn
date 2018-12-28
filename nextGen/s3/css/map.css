@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  * 
- *  Version 1.20 12/13/2018
+ *  Version 1.22 12/28/2018
  *
  *************************************************************/
 
@@ -297,7 +297,7 @@ h3 {
     position:absolute;
     right: 8px;
     background-color: rgba(255,255,255,0.7);
-    max-width: 570px;
+    max-width: 620px;
     bottom: 20px;
     z-index: 2010;
     overflow: hidden;
@@ -309,11 +309,11 @@ h3 {
 }
 
 #listTable {
-    max-width: 560px;
+    max-width: 600px;
 }
 
 #table_cell {
-    max-width: 550px;
+    max-width: 600px;
     padding: 2px;
     padding-left: 4px;
     margin: 1px;
@@ -325,7 +325,7 @@ h3 {
     position:absolute;
     top: 50px;
     left: 120px;
-    width: 31%;
+    width: 33%;
     bottom: 28px;
     padding: 10px;
     z-index: 1010;
@@ -335,7 +335,6 @@ h3 {
     font-family:"Roboto","Trebuchet MS",sans-serif;
     font-size:12pt;
     z-index: 3000;
-    overflow: hidden;
     overflow-y: auto;
     pointer-events:all;
     display: none;
