@@ -11,353 +11,151 @@
 package main
 
 import (
-    "bytes"
-    "database/sql"
-    "encoding/json"
-    "encoding/xml"
-    "container/list"
-    "hash"
-    "log"
-    "pbs/warn/catcher"
-    "strings"
-    "time"
-    "net/http"
-    "fmt"
-    "io/ioutil"
+	"bytes"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"hash"
+	"io/ioutil"
+	"log"
+	"net"
+	"net/http"
+	"strings"
 
-    // mysql driver
-    _ "github.com/go-sql-driver/mysql"
-    cap "github.com/mark-adams/cap-go/cap"
+	"golang.org/x/net/ipv4"
 )
+
+const postURL = "https://94e38d27ol.execute-api.us-west-2.amazonaws.com/dev"
 
 var (
-    inMessage   bool
-    dupe        bool
-    message     []byte
-    breaker     []byte
-    replacer    strings.Replacer
-    h           hash.Hash
-    db          *sql.DB
-    err         error
-    result      sql.Result
-    rows        *sql.Rows
-    dispPoly    string
-    warnChannel chan []byte
-    latestMsg   string
-    previous = list.New()
-)
-
-const (
-    defaultMulticastAddress = "224.3.0.1:5000"
-    dsn                     = "warn:warn@tcp(192.168.2.1:3306)/warn"
-    dedupe = 20 // number of previous messages retained for look-back when filtering out duplicates
-    dupeFile = "/home/pbs/.recent.alerts"
-    post_url = "https://94e38d27ol.execute-api.us-west-2.amazonaws.com/map"
+	inMessage bool
+	message   []byte
+	breaker   []byte
+	lastHash  string
+	replacer  strings.Replacer
+	h         hash.Hash
+	db        *sql.DB
+	err       error
+	result    sql.Result
+	rows      *sql.Rows
+	dispPoly  string
+	channel   chan []byte
 )
 
 type mapItem struct {
 	ID           string
-	Sender		 string
-    Sent         string
-    Status       string
-    MsgType      string
-    Cmam         string
-    Headline     string
-    Source       string
-    Levels       string
-    ResponseType string
-    Description  string
-    Instruction  string
-    Expires      string
-    AreaDesc     string
-    Geocodes     []string
-    Polygons     []string
+	Sent         string
+	Status       string
+	MsgType      string
+	Cmam         string
+	Headline     string
+	Source       string
+	Levels       string
+	ResponseType string
+	Description  string
+	Instruction  string
+	Expires      string
+	AreaDesc     string
+	Geocodes     []string
+	Polygons     string
 }
 
+// Run is a goroutine to monitor UDP packets from the WARN receiver and
+// re-assemble
 func main() {
-    // setup
-    inMessage = false
-    replacer = *strings.NewReplacer("&#xA;", "\n")
-    breaker = []byte{0x47, 0x09, 0x11} // Start of MPEG Packet break?
-    // set up and exercise database connection
-    if db, err = sql.Open("mysql", dsn); err != nil {
-        log.Fatal("Can't open database", err)
-    }
-    defer db.Close()
-    var version string
-    db.QueryRow("SELECT VERSION()").Scan(&version)
-    if version == "" {
-        log.Println("NO DB CONNECTION")
-    } else {
-        log.Println("Connected to", version)
-    }
-    // catcher is a goroutine that monitors the UDP source and hands back raw XML
-    warnChannel = make(chan []byte)
-    go catcher.Run(warnChannel) // in catcher.go
-    for {
-        messageProcessor(<-warnChannel) // XML as []byte
-    }
+	inMessage = false
+	breaker = []byte{0x47, 0x09, 0x11} // Start of MPEG Packet break?
+	if err != nil {
+		log.Fatal("Create breaker", err)
+	}
+	breaker = []byte{0x47, 0x09, 0x11} // Start of MPEG Packet break?
+	// set up the UDP monitor
+	eth0, err := net.InterfaceByName("eth0")
+	if err != nil {
+		log.Fatal("InterfaceByName", err)
+	}
+	group := net.IPv4(224, 3, 0, 1)
+	c, err := net.ListenPacket("udp4", "0.0.0.0:5000")
+	if err != nil {
+		log.Fatal("ListenPacket", err)
+	}
+	defer c.Close()
+	p := ipv4.NewPacketConn(c)
+	if err := p.JoinGroup(eth0, &net.UDPAddr{IP: group}); err != nil {
+		log.Fatal("JoinGroup", err)
+	}
+	b := make([]byte, 1500)
+	for {
+		n, _, _, _ := p.ReadFrom(b)
+		packetHandler(b, n)
+	}
 }
 
-// validates XML via Unmarshall/Marshall round trip to CAP structure from
-// "github.com/mark-adams/cap-go/cap"
-// also pulls aside a few details and passes them all to the database
-func messageProcessor(message []byte) {
-
-    // take out any nulls, esp at start
-    bytes.Trim(message, "\x00")
-
-    // POST XML to new AWS API
-    resp := postXml(message)
-    // in case of an HTTP error, pause and retry
-    if resp.Status != "200 OK" {
-        time.Sleep(2000)
-        resp = postXml(message)
-    }
-   
-    // update last link-activity time to original database
-    receivedTime := time.Now().UTC().Format(time.RFC3339)
-    statement := `update updated set time = ? where ID = 1`
-    ps, err := db.Prepare(statement)
-    check(err)
-    defer ps.Close()
-    // execute DB statement
-    _, err = ps.Exec(receivedTime)
-    check (err)
-
-    // if heartbeat message, do no more
-    if bytes.Equal([]byte("heartbeat"), message) {
-        return
-    } 
-
-    // parse message into Alert struct per github.com/mark-adams/cap-go/cap
-    var alert cap.Alert
-    var uniqueID string
-    var expiresTime string
-    alert = parseAlert(message)
-    uniqueID = alert.SenderID + "," + alert.MessageID + "," + alert.SentDate
-    // if cancel or update, mark referenced earlier message in DB
-    if alert.MessageType == "Cancel" || alert.MessageType == "Update" {
-        if len(alert.ReferenceIDs) > 0 {
-            for _, replaces := range alert.ReferenceIDs {
-                log.Println(replaces, " replaced by ", uniqueID)
-                statement := `update alerts set replacedBy = ? where identifier = ?`
-                ps, err := db.Prepare(statement)
-                check(err)
-                // execute DB statement
-                _, err = ps.Exec(uniqueID, replaces)
-                check (err)
-                ps.Close()
-            }
-        }
-    }
-    // If no Infos, it's probably a cancel, expire it immediately for display purposes
-    if len(alert.Infos) == 0 {
-        expiresTime = receivedTime
-    } else {
-        expiresTime = alert.Infos[0].ExpiresDate
-    }
-
-    // pretty-print the Alert as an XML string
-    capString := toXML(alert)
-
-    // skip if message is a duplicate of one recently received
-    rows, err = db.Query("select identifier from alerts where identifier = \"" + uniqueID + "\"")
-    defer rows.Close()
-    if err != nil {
-        log.Print("Db.Query() failed : ", err)
-    } else {
-        if rows.Next() {
-            log.Println("DUPLICATE", alert.MessageID)
-        } else {
-            // send it to the database
-            go toDatabase(capString, &alert, receivedTime, expiresTime)
-            log.Println("Sent DB", alert.MessageStatus, alert.MessageType, alert.MessageID)
-        }
-    }
-    inMessage = false // for benefit of packet scanner, go back to listening for next msg
+// process each multicast packet, pass along those for assembly
+func packetHandler(b []byte, n int) {
+	msg := b[24:n]
+	msg = removeAll(msg, breaker)               // take out MPEG packet breaks
+	if bytes.Index(msg, []byte("CMAC")) == -1 { // process if not CMAC message
+		assemble(msg)
+	} else {
+		go postXML("heartbeat")
+	}
 }
 
-/*****************************************************
-          FORMAT AND STORE ALERT TO DB
-*****************************************************/
-// called as goroutine, goes to DB to look up polygons from FIPS if necessary,
-// then stores raw XML and JSON to table Alerts
-func toDatabase(capString string, alert *cap.Alert, received string, expires string) {
-    fmt.Println("In toDatabase():",capString)
-
-    var infos []cap.Info
-    var info *cap.Info
-    var area *cap.Area
-
-    if &alert.Infos != nil {
-        infos = alert.Infos
-        if (len(infos) > 0) {
-            info = &alert.Infos[0]
-            if len(info.Areas) > 0 {
-                area = &info.Areas[0]
-            } 
-        }
-    } 
-
-    // check for explicit polygon(s) in CAP message
-    var poly = ""
-    if (area.Polygon != nil) {
-        try {
-            poly = area.Polygon[0]
-        } catch (e) {
-            log.Println("toDatabase get polygon", e)
-        }
-    }
-
-    // FOR TEST
-    //poly = ""
-
-    var dispPoly []string
-    
-    // GEOCODE Mapping
-    // if no polygon in received alert, look up SAME FIPS equivalent polys
-    if poly == "" {
-        geocodes := area.GeocodeAll("SAME")
-
-        // FOR TEST
-        //geocodes = nil
-        //geocodes = append(geocodes, "000000")
-
-        // look up polygons and add to alert
-
-        var polygon string
-        for _, gcode := range geocodes { // for each geocode in Areas[0]
-            rows, err = db.Query("select polygon from fips where samecode=?", gcode)
-            defer rows.Close()
-            if err != nil {
-                log.Print("Db.Query() failed : ", err)
-            } else {
-                for rows.Next() { // for each record returned for FIPS
-                    err = rows.Scan(&polygon) // extract the provided polygon (if any)
-                    if err != nil {
-                        log.Println(err)
-                    } else {
-                        polygon = strings.Replace(polygon, "\"", "", 2)  // remove escaped quotes from db field
-                        dispPoly = append(dispPoly, polygon)
-                    }
-                }
-            }
-        }
-    } else {
-        dispPoly = append(dispPoly, poly)
-    }
-
-    // build map message struct
-    j := mapItem{}
-	j.ID = alert.MessageID
-	j.Sender = alert.SenderID
-    j.Sent = alert.SentDate
-    j.Status = alert.MessageStatus
-    j.MsgType = alert.MessageType
-    if info != nil {
-        j.ResponseType = info.ResponseType
-        j.Cmam = info.Parameter("CMAMtext")
-        j.Headline = info.Headline
-        j.Source = info.SenderName
-        j.Levels = info.Urgency + " / " + info.Severity + " / " + info.Certainty
-        j.Description = info.EventDescription
-        j.Instruction = info.Instruction
-        j.Expires = info.ExpiresDate
-        if area != nil {
-            j.AreaDesc = area.Description
-            j.Geocodes = area.GeocodeAll("SAME")
-            j.Polygons = dispPoly
-        }
-    }
-    // serialize struct as JSON to go to database
-    var jsn []byte
-    if jsn, err = json.Marshal(j); err != nil {
-        log.Print("json.Marshal", err.Error())
-    }
-
-    // convert received and expires times to GMT in suitable format for DB
-    format := "2006-01-02T15:04:05-07:00"
-    zuluSent, _ := time.Parse(format, j.Sent)
-    zuluSent = zuluSent.UTC()
-    zuluExpires, _ := time.Parse(format, j.Expires)
-    zuluExpires = zuluExpires.UTC()
-
-    // save XML, JSON and times to Alerts table
-    // the *DB is "db"
-    statement := `insert into alerts (xml, json, received, expires, identifier) values (?, ?, ?, ?, ?)`
-    var ps *sql.Stmt
-    if ps, err = db.Prepare(statement); err != nil {
-        log.Print("warn.main Prepare", err.Error())
-    }
-	// execute DB statement
-	uniqueID := j.Sender + "," + j.ID + "," + j.Sent
-    if _, err = ps.Exec(capString, string(jsn), zuluSent, zuluExpires, uniqueID); err != nil {
-        log.Print("warn.main Exec", err.Error())
-    }
-    ps.Close()
+func assemble(msg []byte) {
+	// if packet contains "<?xml ", start a new message
+	st := bytes.Index(msg, []byte("<?xml "))
+	if st != -1 {
+		if !inMessage {
+			inMessage = true
+			msg = msg[st:] // trim off leading garbage
+		}
+		message = make([]byte, 0) // init a new message
+	}
+	// if packet contains "</ale" it's the end of the message
+	en := bytes.Index(msg, []byte("</ale"))
+	if inMessage && en != -1 {
+		msg = msg[:en]                           // trim off trailing garbage
+		msg = append(msg, []byte("</alert>")...) // repair the closing tag
+		message = append(message, msg...)
+		inMessage = false
+		//fmt.Println(string(message))
+		go postXML(string(message))
+		return
+	}
+	// otherwise, if we're in message, append it
+	if inMessage {
+		message = append(message, msg...)
+	}
 }
-
-/*****************************************************
-                    UTILITIES
-*****************************************************/
 
 // remove all instances of a byte slice from within another byte slice
 func removeAll(source []byte, remove []byte) []byte {
-    for bytes.Index(source, remove) > -1 {
-        pnt := bytes.Index(source, remove)
-        source = append(source[:pnt], source[pnt+12:]...)
-    }
-    return source
+	for bytes.Index(source, remove) > -1 {
+		pnt := bytes.Index(source, remove)
+		source = append(source[:pnt], source[pnt+12:]...)
+	}
+	return source
 }
 
-func parseAlert(message []byte) cap.Alert {
-    alert := cap.Alert{}
-    err = xml.Unmarshal(message, &alert)
-    if err != nil {
-        log.Println(err)
-    }
-    return alert
-}
-
-func toXML(alert cap.Alert) string {
-    cap, err := xml.MarshalIndent(alert, "", "    ") // prettiness
-    if err != nil {
-        log.Print(err)
-        return ""
-    }
-    bytes.Trim(cap, "\x00")
-    // return indented XML with C18n XML-escaped newlines ("&#xA;") replaced
-    return "<?xml version='UTF-8' encoding='UTF-8'?>\n" + replacer.Replace(string(cap))
-}
-
-func check(err error) {
-    if err != nil {
-        log.Print("warnMonitor", err.Error())
-    }
-}
-
-func postXml(message []byte) *http.Response {
-    
-	req, _ := http.NewRequest("POST", post_url, bytes.NewBuffer(message))
+func postXML(message string) {
+	req, _ := http.NewRequest("POST", postURL, bytes.NewBuffer([]byte(message)))
 	req.Header.Set("Content-Type", "application/xml")
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println("postXml http.client.Do Error", err)
+		log.Println("postXML Error", err)
 	}
-    defer resp.Body.Close()
-    body, _ := ioutil.ReadAll(resp.Body)
-    var m map[string]interface{}
-    err = json.Unmarshal(body, &m)
-    if err != nil {
-        fmt.Println(resp.StatusCode, "-", string(body))
-        // if error, pause and retry
+	defer resp.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+	var m map[string]interface{}
+	err = json.Unmarshal(body, &m)
+	if err != nil {
+		fmt.Println(resp.StatusCode, "-", string(body))
+		// if error, pause and retry
 
-
-        return resp
-    } else {
-        log.Println(resp.StatusCode, "-", m["body"]) 
-    }
-	return resp
+	} else {
+		log.Println(resp.StatusCode, "-", m["body"])
+	}
+	return
 }
