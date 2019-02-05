@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.20 12/13/2018
+ *  Version 2.01 2/4/2018
  *
  *************************************************************/
 
@@ -14,6 +14,7 @@ var map
 var markerGroup
 var polyGroup
 var center
+var pollTimer
 
 var scanning = true
 var listing = false
@@ -267,7 +268,9 @@ const resetView = evt => {
         var neLatLng = L.latLng([mbdict["_northEast"]["lat"], mbdict["_northEast"]["lng"]])
         mbounds = L.latLngBounds(swLatLng, neLatLng)
         map.fitBounds(mbounds)
-    } catch { }  // if no viewport saved, do nothing
+    } catch {  // else set the default default
+        localStorage.defaultBounds = {"_southWest":{"lat":-3.843701834229144,"lng":-240.41038513183594},"_northEast":{"lat":71.47566987474768,"lng":32.75367736816407}}
+    }  
 }
 
 // save current viewport parameters to LocalStorage
