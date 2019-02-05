@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.20 12/13/2018
+ *  Version 2.01 2/4/2019
  *
  *************************************************************/
 
@@ -12,11 +12,12 @@
 // Alert Scanner
 //////////////////////////////////////////////////////
 
-var tt_running = false;
-var typed;
-const hold = 3000;
-var messageArray;
-var messagePointer = 0;
+var tt_running = false
+var typed
+const hold = 3000
+var messageArray
+var messagePointer = 0
+var safetyTimer
 
 const hideScroll = () => {
     consoleBG.style.display = "none"
@@ -58,9 +59,18 @@ const showNextAlert = () => {
         consoleBG.style.backgroundColor="transparent"
         msgId.style.backgroundColor = "#fff"
         msgId.style.display="block"
-        //resetView()
+        resetView()
         redrawMap()
+        messagePointer = 0
+        restart()
     }
+}
+
+// force skipping to the next alert
+const forceNext = () => {
+    typed.destroy()
+    console.log("force")
+    showNextAlert()
 }
 
 // type out an individual alert, call showNextAlert() again when complete
@@ -73,31 +83,46 @@ const typeAlert = alert => {
     $("#msgId").html("Alert " + (messagePointer + 1) + " of " + alerts.length)
     clr = getColor(alert) + "aa"
     $("#msgId").css("background-color", clr)
+    // in case the Typer doesn't complete normally
+    var maxTime = Math.floor(make_text(alert).length / 45) * 1000
+    safetyTimer = setTimeout(forceNext, maxTime)
     typed = new Typed(consoleText, {
         strings: [make_text(alert)],
         typeSpeed: 10,
         showCursor: false,
-        fadeOut: true,
+        fadeOut: false,
         fadeOutDelay:hold,
         startDelay: 250,
         loop: false,
         onComplete: function(self) {
             // destroy the Typer, reset the text panel position, trigger next
             setTimeout(function(){
+                clearTimeout(safetyTimer)
                 typed.destroy();
                 $("#console_text").css('top',0)
                 showNextAlert()
             },
-            1500)   
+            2500)   
         }
     })
+}
+
+// escape killer characters in free-text fields
+const escape = str => {
+    return str.replace("&", "and")
 }
 
 // format the alert contents as HTML for the console or table display
 const make_text = alert => {
     var sent = alert.Sent
     sent = sent.replace("T"," at ")
-    // Now build the html
+    // Prevent killer ampersands in free-text fields
+    alert.Source = escape(alert.Source)
+    alert.Headline = escape(alert.Headline)
+    alert.Cmam = escape(alert.Cmam)
+    alert.Description = escape(alert.Description)
+    alert.Instruction = escape(alert.Instruction)
+    alert.AreaDesc = escape(alert.AreaDesc)
     var text = ""
     var warning = ""
     if (alert.Status == "Test") { warning = "*** TEST MESSAGE ***" }
@@ -110,7 +135,7 @@ const make_text = alert => {
     } else {
         heading = alert.Cmam
     }
-    ad = alert.AreaDesc
+    // Now build the html
     if (warning != "") { text = "<p>${warning}</p>"}
     text += `
 <small><b>${alert.Source}</b></small><br>
@@ -122,7 +147,7 @@ const make_text = alert => {
 </small>
 <p>${alert.Description}</p>
 <p>${alert.Instruction}</p>
-<p>Area: ${ad}</p>
+<p>Area: ${alert.AreaDesc}</p>
 <small><p>Expires: ${alert.Expires.replace('T',' ')}</p></small>
 <small><p>Ref: ${alert.ID} </p></small>
             `
