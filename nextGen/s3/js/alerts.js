@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.20 12/13/2018
+ *  Version 2.01 2/4/2019
  *
  *************************************************************/
 
@@ -65,7 +65,7 @@ $(window).on('load', function() {
         showList()
         showScroll()
     }
-    setInterval(poll, 15000)
+    pollTimer = setInterval(poll, 10000)
     poll()
 })
 
@@ -74,7 +74,7 @@ $(window).bind('focus', function() {
     poll()
 })
 
-// true if a particular alert is unexpired
+// true if a particular alert is NOT expired
 const isCurrent = item => {  // true if not expired
     expString = item.Expires
     exp = new Date(expString)
@@ -86,3 +86,12 @@ const isCurrent = item => {  // true if not expired
         return true
     }
 }
+
+// restart polling whenever window gains focus
+$(window).on('focus', function() {
+    var date = new Date();
+    console.log(date, "Restarting Poll Timer")
+    clearInterval(pollTimer)
+    pollTimer = setInterval(poll, 10000)
+    poll()
+})
