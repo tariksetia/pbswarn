@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 2.01 2/4/2019
+ *  Version 2.02 2/8/2019
  *
  *************************************************************/
 
@@ -62,7 +62,7 @@ const showNextAlert = () => {
         resetView()
         redrawMap()
         messagePointer = 0
-        restart()
+        //restart()
     }
 }
 
