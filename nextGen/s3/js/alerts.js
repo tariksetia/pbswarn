@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 2.01 2/4/2019
+ *  Version 2.02 2/9/2019
  *
  *************************************************************/
 
@@ -39,7 +39,9 @@ const success = data => {
         return
     }
     // update the heartbeat display
-    $('#hb').html("Link up " + j.heartbeat.replace(" ", " / "))
+    if (j.heartbeat) {
+        $('#hb').html("Link up " + j.heartbeat.replace(" ", " / "))
+    }
     // and make array of alerts global
     alerts = j.alerts
     // tell List and Scanner to update themselves from global 'alerts' object
