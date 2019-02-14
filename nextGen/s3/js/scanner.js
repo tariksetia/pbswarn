@@ -95,7 +95,6 @@ const typeAlert = alert => {
         onComplete: function(self) {
             // destroy the Typer, reset the text panel position, trigger next
             setTimeout(function(){
-                clearTimeout(safetyTimer)
                 typed.destroy();
                 $("#console_text").css('top',0)
                 showNextAlert()
