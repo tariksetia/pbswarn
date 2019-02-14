@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.20 12/13/2018
+ *  Version 2.01 2/14/2019
  *
  *************************************************************/
 
@@ -52,6 +52,7 @@ const updateTable = () => {
         tbody.removeChild(tbody.firstChild);
     }
     // for each alert, add a row to the table
+    if (!alerts) { return; }
     alerts.forEach(row => {
         if (row.Headline !=null && row.Headline.length > 0) {
             slug = row.Headline
