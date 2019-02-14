@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 2.02 2/8/2019
+ *  Version 2.03 2/14/2019
  *
  *************************************************************/
 
@@ -17,7 +17,6 @@ var typed
 const hold = 3000
 var messageArray
 var messagePointer = 0
-var safetyTimer
 
 const hideScroll = () => {
     consoleBG.style.display = "none"
@@ -85,7 +84,6 @@ const typeAlert = alert => {
     $("#msgId").css("background-color", clr)
     // in case the Typer doesn't complete normally
     var maxTime = Math.floor(make_text(alert).length / 45) * 1000
-    safetyTimer = setTimeout(forceNext, maxTime)
     typed = new Typed(consoleText, {
         strings: [make_text(alert)],
         typeSpeed: 10,
