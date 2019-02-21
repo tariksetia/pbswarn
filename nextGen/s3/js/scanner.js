@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 2.03 2/14/2019
+ *  Version 2.04 2/21/2019
  *
  *************************************************************/
 
@@ -43,7 +43,7 @@ const updateScanner = () => { // called when new data arrives
 
 // type the alerts in rotation in sliding div id="console_text"
 const showNextAlert = () => {
-    if (alerts.length > 0) {
+    if (alerts && alerts.length > 0) {
         if (messagePointer >= alerts.length) messagePointer = 0
         alert = alerts[messagePointer]
         showScroll()
@@ -61,7 +61,9 @@ const showNextAlert = () => {
         resetView()
         redrawMap()
         messagePointer = 0
-        //restart()
+        // and make sure poll timer is still running
+        clearInterval(pollTimer)
+        pollTimer = setInterval(poll, 10000)
     }
 }
 
