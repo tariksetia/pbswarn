@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  * 
- *  Version 1.22 12/28/2018
+ *  Version 2.01 2/23/2018
  *
  *************************************************************/
 
@@ -298,9 +298,10 @@ h3 {
     right: 8px;
     background-color: rgba(255,255,255,0.7);
     max-width: 620px;
+    max-height: 40%;
     bottom: 20px;
     z-index: 2010;
-    overflow: hidden;
+    overflow: auto;
     overflow-y: auto;
     color: #fff;
     font-size:8pt;
