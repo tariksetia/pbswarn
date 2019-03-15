@@ -108,7 +108,11 @@ const typeAlert = alert => {
 
 // escape killer characters in free-text fields
 const escape = str => {
-    return str.replace("&", "and")
+    if (typeof str !== 'undefined') {
+        return str.replace("&", "and")
+    } else {
+        return ""
+    }
 }
 
 // format the alert contents as HTML for the console or table display
