@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 2.02 2/9/2019
+ *  Version 2.10 3/19/2019
  *
  *************************************************************/
 
@@ -39,8 +39,11 @@ const success = data => {
         return
     }
     // update the heartbeat display
-    if (j.heartbeat) {
-        $('#hb').html("Link up " + j.heartbeat.replace(" ", " / "))
+    if (typeof j.heartbeat !== "undefined") {
+        setHeartbeat(j.heartbeat.replace(" ", " / "))
+        // flash the heartbeat
+        colorHeartbeat("yellow")
+        setTimeout(deColorHeartbeat, 200)
     }
     // and make array of alerts global
     alerts = j.alerts
@@ -97,3 +100,18 @@ $(window).on('focus', function() {
     pollTimer = setInterval(poll, 10000)
     poll()
 })
+
+
+const setHeartbeat = timestamp => {
+    $('#hb').html("Link up " + timestamp)
+}
+
+const colorHeartbeat = color => {
+    $('#hb').css("background-color", "yellow")
+}
+
+const deColorHeartbeat = color => {
+    $('#hb').css("background-color", "white")
+    // color HB red if old
+
+}
