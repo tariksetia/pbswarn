@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 2.05 3/15/2019
+ *  Version 2.1 3/24/2019
  *
  *************************************************************/
 
@@ -35,10 +35,19 @@ const showScroll = () => {
 
 const updateScanner = () => { // called when new data arrives
     // if we're not already typing and if scanner is active, type next alert
-    if ( typeof(typed) == "undefined" && scanning) {
+    stamp = new Date().toISOString()
+    console.log(stamp +" updateScanner: " + alerts.length + " from " + previousCount)
+    if ( alerts.length > previousCount ) {  // if an additional alert joins the list
+        console.log("updateScanner reset and showNextAlert")
         messagePointer = 0
+        showScroll()
         showNextAlert()
     }
+    if (alerts.length == 0) {
+        hideScroll()
+        resetView()
+    }
+    previousCount = alerts.length
 }
 
 // type the alerts in rotation in sliding div id="console_text"
