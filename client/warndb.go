@@ -18,23 +18,28 @@ var areaID int64
 
 // ToDB ...
 func ToDB(alert cap.Alert, xml string) {
-	// test if duplicate
-	statement := "select count(*) from alerts where identifier ='" + alert.Identifier + "' sender = '" + alert.Sender + "' and sent = '" + alert.Sent + "'"
 
 	db, err := sql.Open("sqlite3", "/home/pbs/warn.db")
 	if err != nil {
 		log.Println("DB open err:", err)
 	}
 	defer db.Close()
+
+	// test if duplicate
+	statement, err := db.Prepare("select count(*) from alerts where identifier = ? and sender = ? and sent = ?")
+	rows, err := statement.Query(alert.Identifier, alert.Sender, alert.Sent)
 	var cnt int
-	_ = db.QueryRow(statement).Scan(&cnt)
+	for rows.Next() {
+		err = rows.Scan(&cnt)
+	}
 	// if no existing match, post to database
 	if cnt > 0 {
 		log.Println("DUPLICATE:", alert.Identifier+","+alert.Sender+","+alert.Sent)
+
 	} else {
 
 		// add the Alert
-		statement, err := db.Prepare("insert into alerts (identifier, sender, sent, status, msgType, source, code, note) values (?, ?, ?, ?, ?, ?, ?, ?)")
+		statement, err = db.Prepare("insert into alerts (identifier, sender, sent, status, msgType, source, code, note) values (?, ?, ?, ?, ?, ?, ?, ?)")
 		res, err := statement.Exec(alert.Identifier, alert.Sender, alert.Sent, alert.Status, alert.MessageType, alert.Source, alert.Code, alert.Note)
 		if err != nil {
 			log.Println("Insert alert error:", err)
