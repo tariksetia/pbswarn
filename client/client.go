@@ -20,6 +20,7 @@ import (
 	_ "github.com/mattn/go-sqlite3" // driver for sql
 )
 
+// DbAlert ...
 type DbAlert struct {
 	ID          string `json:"alertID"`
 	Identifier  string `xml:"identifier" json:"identifier"`
@@ -38,6 +39,7 @@ type DbAlert struct {
 	ReplacedBy  string `json:"replacedBy"`
 }
 
+// DbInfo ...
 type DbInfo struct {
 	ID           string `json:"infoID"`
 	AlertID      string `json:"alertID"`
@@ -62,6 +64,7 @@ type DbInfo struct {
 	Web          string `xml:"web" json:"web"`
 }
 
+// DbParameter ...
 type DbParameter struct {
 	ID        string `json:"paramID"`
 	InfoID    string `json:"infoID"`
@@ -69,6 +72,7 @@ type DbParameter struct {
 	Value     string `json:"value"`
 }
 
+// DbEventCode ...
 type DbEventCode struct {
 	ID        string `json:"eventCodeID"`
 	InfoID    string `json:"infoID"`
@@ -76,6 +80,7 @@ type DbEventCode struct {
 	Value     string `json:"value"`
 }
 
+// DbResource ...
 type DbResource struct {
 	ID          string `json:"resourceID"`
 	InfoID      string `json:"infoID"`
@@ -87,6 +92,7 @@ type DbResource struct {
 	DerefURI    string `json:"deref_uri"`
 }
 
+// DbArea ...
 type DbArea struct {
 	ID       string `json:"areaID"`
 	InfoID   string `json:"infoID"`
@@ -95,18 +101,21 @@ type DbArea struct {
 	Ceiling  string `json:"ceiling"`
 }
 
+// DbPolygon ...
 type DbPolygon struct {
 	ID      string `json:"polygonID"`
 	AreaID  string `json:"areaID"`
 	Polygon string `json:"polygon"`
 }
 
+// DbCircle ...
 type DbCircle struct {
 	ID     string `json:"circleID"`
 	AreaID string `json:"areaID"`
 	Circle string `json:"circle"`
 }
 
+// DbGeocode ...
 type DbGeocode struct {
 	ID        string `json:"geocodeID"`
 	AreaID    string `json:"areaID"`
@@ -114,6 +123,7 @@ type DbGeocode struct {
 	Value     string `json:"value"`
 }
 
+// DbCAP ...
 type DbCAP struct {
 	ID      string `json:"capID"`
 	AlertID string `json:"alertID"`
@@ -137,7 +147,7 @@ func init() {
 	}
 }
 
-// get alerts in batches of 12 from specified offset
+// GetAlerts ... get alerts in batches of 12 from specified offset
 func GetAlerts() string {
 	statement, err := db.Prepare("select * from alerts order by id desc")
 	check(err)
@@ -164,7 +174,7 @@ func GetAlerts() string {
 	return string(astring)
 }
 
-// get infos for a specified alert
+// GetInfos ... get infos for a specified alert
 func GetInfos(alert string) string {
 	statement, err := db.Prepare("select * from infos where alertId = ?")
 	check(err)
@@ -182,8 +192,8 @@ func GetInfos(alert string) string {
 	return string(istring)
 }
 
-// get parameters for a specified info
-func GetParams(info string) string {
+// GetParameters ... get parameters for a specified info
+func GetParameters(info string) string {
 	statement, err := db.Prepare("select * from parameters where infoId = ?")
 	check(err)
 	rows, err := statement.Query(info)
@@ -200,7 +210,7 @@ func GetParams(info string) string {
 	return string(pstring)
 }
 
-// get eventCodes for specified info
+// GetEventCodes ... get eventCodes for specified info
 func GetEventCodes(info string) string {
 	statement, err := db.Prepare("select * from eventCodes where infoId = ?")
 	check(err)
@@ -218,7 +228,7 @@ func GetEventCodes(info string) string {
 	return string(estring)
 }
 
-// get resources for specified info
+// GetResources ... get resources for specified info
 func GetResources(info string) string {
 	statement, err := db.Prepare("select * from resources where infoId = ?")
 	check(err)
@@ -236,7 +246,7 @@ func GetResources(info string) string {
 	return string(rstring)
 }
 
-// get areas for specified info
+// GetAreas ... get areas for specified info
 func GetAreas(info string) string {
 	statement, err := db.Prepare("select * from areas where infoId = ?")
 	check(err)
@@ -254,7 +264,7 @@ func GetAreas(info string) string {
 	return string(rstring)
 }
 
-// get polygons for specified area
+// GetPolygons ... get polygons for specified area
 func GetPolygons(area string) string {
 	statement, err := db.Prepare("select * from polygons where areaId = ?")
 	check(err)
@@ -272,7 +282,7 @@ func GetPolygons(area string) string {
 	return string(pstring)
 }
 
-// get circles for specified area
+// GetCircles ... get circles for specified area
 func GetCircles(area string) string {
 	statement, err := db.Prepare("select * from circles where areaId = ?")
 	check(err)
@@ -290,7 +300,7 @@ func GetCircles(area string) string {
 	return string(cstring)
 }
 
-// get geocodes for specified area
+// GetGeocodes ... get geocodes for specified area
 func GetGeocodes(area string) string {
 	statement, err := db.Prepare("select * from geocodes where areaId = ?")
 	check(err)
@@ -308,7 +318,7 @@ func GetGeocodes(area string) string {
 	return string(gstring)
 }
 
-// get CAP for specified alert
+// GetCAP ... get CAP for specified alert
 func GetCAP(alert string) string {
 	statement, err := db.Prepare("select * from CAP where alertId = ?")
 	check(err)
@@ -323,7 +333,7 @@ func GetCAP(alert string) string {
 	}
 	cstring, err := json.MarshalIndent(caps, "", "   ")
 	check(err)
-	// undo UTF64 escaping of "<" and ">"
+	// undo UTF64 escaping of "<" and ">" done by json.Marshal
 	cs := strings.Replace(string(cstring), "\\u003e", ">", -1)
 	cs = strings.Replace(cs, "\\u003c", "<", -1)
 	return string(cs)
