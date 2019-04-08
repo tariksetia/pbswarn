@@ -4,184 +4,333 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.2 4/5/2019
+ *  Version 1.2 4/8/2019
  *
  *************************************************************/
 
 package main
 
 import (
-	"../cap"
-	"logging"
-	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
-	"hash"
 	"log"
-	"net"
 	"strings"
-	"../warndb"
 
-	"golang.org/x/net/ipv4"
-	config "github.com/Tkanos/gonfig"
+	_ "github.com/mattn/go-sqlite3" // driver for sql
 )
 
-const postURL = "https://94e38d27ol.execute-api.us-west-2.amazonaws.com/dev"
-
-var (
-	inMessage bool
-	message   []byte
-	breaker   []byte
-	lastHash  string
-	replacer  strings.Replacer
-	h         hash.Hash
-	db        *sql.DB
-	err       error
-	result    sql.Result
-	rows      *sql.Rows
-	dispPoly  string
-	channel   chan []byte
-	cfg		Configuration
-)
-
-// Configuration data structure for application config
-type Configuration struct {
-    Station         string
-	Multicast      string
+type DbAlert struct {
+	ID          string `json:"alertID"`
+	Identifier  string `xml:"identifier" json:"identifier"`
+	Sender      string `xml:"sender" json:"sender"`
+	Sent        string `xml:"sent" json:"sent"`
+	Status      string `xml:"status" json:"status"`
+	MessageType string `xml:"msgType" json:"message_type"`
+	Source      string `xml:"source" json:"source"`
+	Scope       string `xml:"scope" json:"scope"`
+	Restriction string `xml:"restriction" json:"restriction"`
+	Addresses   string `xml:"addresses" json:"addresses"`
+	Code        string `xml:"code" json:"codes"`
+	Note        string `xml:"note" json:"note"`
+	Refs        string `xml:"references" json:"references"`
+	Incidents   string `xml:"incidents" json:"incidents"`
+	ReplacedBy  string `json:"replacedBy"`
 }
 
-type mapItem struct {
-	ID           string
-	Sent         string
-	Status       string
-	MsgType      string
-	Cmam         string
-	Headline     string
-	Source       string
-	Levels       string
-	ResponseType string
-	Description  string
-	Instruction  string
-	Expires      string
-	AreaDesc     string
-	Geocodes     []string
-	Polygons     string
+type DbInfo struct {
+	ID           string `json:"infoID"`
+	AlertID      string `json:"alertID"`
+	Language     string `json:"language"`
+	Category     string `json:"categories"`
+	Event        string `json:"event"`
+	ResponseType string `json:"responseType"`
+	Urgency      string `json:"urgency"`
+	Severity     string `json:"severity"`
+	Certainty    string `json:"certainty"`
+	Expires      string `json:"expires"`
+	SenderName   string `json:"senderName"`
+	Slug         string `json:"slug"`
+	Effective    string `json:"effective"`
+	Onset        string `json:"onset"`
+	Audience     string `json:"audience"`
+	Headline     string `json:"headline"`
+	CMAM         string `json:"cmam"`
+	Description  string `xml:"description" json:"description"`
+	Instruction  string `xml:"instruction" json:"instruction"`
+	Contact      string `xml:"contact" json:"contact"`
+	Web          string `xml:"web" json:"web"`
 }
 
-// Run is a goroutine to monitor UDP packets from the WARN receiver and 
-// re-assemble
+type DbParameter struct {
+	ID        string `json:"paramID"`
+	InfoID    string `json:"infoID"`
+	ValueName string `json:"valueName"`
+	Value     string `json:"value"`
+}
+
+type DbEventCode struct {
+	ID        string `json:"eventCodeID"`
+	InfoID    string `json:"infoID"`
+	ValueName string `json:"valueName"`
+	Value     string `json:"value"`
+}
+
+type DbResource struct {
+	ID          string `json:"resourceID"`
+	InfoID      string `json:"infoID"`
+	Description string `json:"description"`
+	MimeType    string `json:"mime_type"`
+	Size        int    `json:"size"`
+	URI         string `json:"uri"`
+	Digest      string `json:"digest"`
+	DerefURI    string `json:"deref_uri"`
+}
+
+type DbArea struct {
+	ID       string `json:"areaID"`
+	InfoID   string `json:"infoID"`
+	AreaDesc string `json:"areaDesc"`
+	Altitude string `json:"altitude"`
+	Ceiling  string `json:"ceiling"`
+}
+
+type DbPolygon struct {
+	ID      string `json:"polygonID"`
+	AreaID  string `json:"areaID"`
+	Polygon string `json:"polygon"`
+}
+
+type DbCircle struct {
+	ID     string `json:"circleID"`
+	AreaID string `json:"areaID"`
+	Circle string `json:"circle"`
+}
+
+type DbGeocode struct {
+	ID        string `json:"geocodeID"`
+	AreaID    string `json:"areaID"`
+	ValueName string `json:"valueName"`
+	Value     string `json:"value"`
+}
+
+type DbCAP struct {
+	ID      string `json:"capID"`
+	AlertID string `json:"alertID"`
+	CAP     string `json:"cap"`
+}
+
+var db *sql.DB
+var rows *sql.Rows
+var err error
+
 func main() {
-	// Get configuration
-	cfg = Configuration{}
-    if err := config.GetConf("./warnRx.conf", &cfg); err != nil {
-        logging.Log("warnRx.main GetConf", err.Error())
-    }
-	inMessage = false
-	breaker = []byte{0x47, 0x09, 0x11} // Start of MPEG Packet break?
+	defer db.Close()
+	j := GetCAP("2")
+	fmt.Println(j)
+}
+
+func init() {
+	db, err = sql.Open("sqlite3", "/home/pbs/warn.db")
 	if err != nil {
-		log.Fatal("Create breaker", err)
+		log.Println("DB open err:", err)
 	}
-	breaker = []byte{0x47, 0x09, 0x11} // Start of MPEG Packet break?
-	// set up the UDP monitor
-	eth0, err := net.InterfaceByName("eth0")
+}
+
+// get alerts in batches of 12 from specified offset
+func GetAlerts() string {
+	statement, err := db.Prepare("select * from alerts order by id desc")
+	check(err)
+	rows, err := statement.Query()
+	check(err)
+	var alerts []DbAlert
+	for rows.Next() {
+		var alert DbAlert
+		// grab nullable fields from DB
+		var rest sql.NullString
+		var addr sql.NullString
+		var inc sql.NullString
+		var replacedBy string
+		err = rows.Scan(&alert.ID, &alert.Identifier, &alert.Sender, &alert.Sent, &alert.Status, &alert.MessageType, &alert.Source, &alert.Scope, &rest, &addr, &alert.Code, &alert.Note, &alert.Refs, &inc, &replacedBy)
+		check(err)
+		// insert nullable fields into Struct
+		alert.Restriction = rest.String
+		alert.Addresses = addr.String
+		alert.Incidents = inc.String
+		alerts = append(alerts, alert)
+	}
+	astring, err := json.MarshalIndent(alerts, "", "   ")
+	check(err)
+	return string(astring)
+}
+
+// get infos for a specified alert
+func GetInfos(alert string) string {
+	statement, err := db.Prepare("select * from infos where alertId = ?")
+	check(err)
+	rows, err := statement.Query(alert)
+	check(err)
+	var infos []DbInfo
+	for rows.Next() {
+		var info DbInfo
+		err = rows.Scan(&info.ID, &info.AlertID, &info.Language, &info.Category, &info.Event, &info.ResponseType, &info.Urgency, &info.Severity, &info.Certainty, &info.Expires, &info.SenderName, &info.Slug, &info.Effective, &info.Onset, &info.Audience, &info.Headline, &info.CMAM, &info.Description, &info.Instruction, &info.Contact, &info.Web)
+		check(err)
+		infos = append(infos, info)
+	}
+	istring, err := json.MarshalIndent(infos, "", "   ")
+	check(err)
+	return string(istring)
+}
+
+// get parameters for a specified info
+func GetParams(info string) string {
+	statement, err := db.Prepare("select * from parameters where infoId = ?")
+	check(err)
+	rows, err := statement.Query(info)
+	check(err)
+	var params []DbParameter
+	for rows.Next() {
+		var param DbParameter
+		err = rows.Scan(&param.ID, &param.InfoID, &param.ValueName, &param.Value)
+		check(err)
+		params = append(params, param)
+	}
+	pstring, err := json.MarshalIndent(params, "", "   ")
+	check(err)
+	return string(pstring)
+}
+
+// get eventCodes for specified info
+func GetEventCodes(info string) string {
+	statement, err := db.Prepare("select * from eventCodes where infoId = ?")
+	check(err)
+	rows, err := statement.Query(info)
+	check(err)
+	var eCodes []DbEventCode
+	for rows.Next() {
+		var eCode DbEventCode
+		err = rows.Scan(&eCode.ID, &eCode.InfoID, &eCode.ValueName, &eCode.Value)
+		check(err)
+		eCodes = append(eCodes, eCode)
+	}
+	estring, err := json.MarshalIndent(eCodes, "", "   ")
+	check(err)
+	return string(estring)
+}
+
+// get resources for specified info
+func GetResources(info string) string {
+	statement, err := db.Prepare("select * from resources where infoId = ?")
+	check(err)
+	rows, err := statement.Query(info)
+	check(err)
+	var ress []DbResource
+	for rows.Next() {
+		var res DbResource
+		err = rows.Scan(&res.ID, &res.InfoID, &res.Description, &res.MimeType, &res.URI, &res.Size, &res.DerefURI)
+		check(err)
+		ress = append(ress, res)
+	}
+	rstring, err := json.MarshalIndent(ress, "", "   ")
+	check(err)
+	return string(rstring)
+}
+
+// get areas for specified info
+func GetAreas(info string) string {
+	statement, err := db.Prepare("select * from areas where infoId = ?")
+	check(err)
+	rows, err := statement.Query(info)
+	check(err)
+	var areas []DbArea
+	for rows.Next() {
+		var area DbArea
+		err = rows.Scan(&area.ID, &area.InfoID, &area.AreaDesc, &area.Altitude, &area.Ceiling)
+		check(err)
+		areas = append(areas, area)
+	}
+	rstring, err := json.MarshalIndent(areas, "", "   ")
+	check(err)
+	return string(rstring)
+}
+
+// get polygons for specified area
+func GetPolygons(area string) string {
+	statement, err := db.Prepare("select * from polygons where areaId = ?")
+	check(err)
+	rows, err := statement.Query(area)
+	check(err)
+	var polys []DbPolygon
+	for rows.Next() {
+		var poly DbPolygon
+		err = rows.Scan(&poly.ID, &poly.AreaID, &poly.Polygon)
+		check(err)
+		polys = append(polys, poly)
+	}
+	pstring, err := json.MarshalIndent(polys, "", "   ")
+	check(err)
+	return string(pstring)
+}
+
+// get circles for specified area
+func GetCircles(area string) string {
+	statement, err := db.Prepare("select * from circles where areaId = ?")
+	check(err)
+	rows, err := statement.Query(area)
+	check(err)
+	var circles []DbCircle
+	for rows.Next() {
+		var circle DbCircle
+		err = rows.Scan(&circle.ID, &circle.AreaID, &circle.Circle)
+		check(err)
+		circles = append(circles, circle)
+	}
+	cstring, err := json.MarshalIndent(circles, "", "   ")
+	check(err)
+	return string(cstring)
+}
+
+// get geocodes for specified area
+func GetGeocodes(area string) string {
+	statement, err := db.Prepare("select * from geocodes where areaId = ?")
+	check(err)
+	rows, err := statement.Query(area)
+	check(err)
+	var geocodes []DbGeocode
+	for rows.Next() {
+		var geocode DbGeocode
+		err = rows.Scan(&geocode.ID, &geocode.AreaID, &geocode.ValueName, &geocode.Value)
+		check(err)
+		geocodes = append(geocodes, geocode)
+	}
+	gstring, err := json.MarshalIndent(geocodes, "", "   ")
+	check(err)
+	return string(gstring)
+}
+
+// get CAP for specified alert
+func GetCAP(alert string) string {
+	statement, err := db.Prepare("select * from CAP where alertId = ?")
+	check(err)
+	rows, err := statement.Query(alert)
+	check(err)
+	var caps []DbCAP
+	for rows.Next() {
+		var cap DbCAP
+		err = rows.Scan(&cap.ID, &cap.AlertID, &cap.CAP)
+		check(err)
+		caps = append(caps, cap)
+	}
+	cstring, err := json.MarshalIndent(caps, "", "   ")
+	check(err)
+	// undo UTF64 escaping of "<" and ">"
+	cs := strings.Replace(string(cstring), "\\u003e", ">", -1)
+	cs = strings.Replace(cs, "\\u003c", "<", -1)
+	return string(cs)
+}
+
+func check(err error) {
 	if err != nil {
-		log.Fatal("InterfaceByName", err)
+		log.Println(err)
 	}
-	group := net.IPv4(224, 3, 0, 1)
-	c, err := net.ListenPacket("udp4", cfg.Multicast)
-	if err != nil {
-		log.Fatal("ListenPacket", err)
-	}
-	defer c.Close()
-	p := ipv4.NewPacketConn(c)
-	if err := p.JoinGroup(eth0, &net.UDPAddr{IP: group}); err != nil {
-		log.Fatal("JoinGroup", err)
-	}
-	b := make([]byte, 1500)
-	log.Println("Starting multicast monitoring from WARN receiver on " + cfg.Multicast + "\n")
-	for {
-		n, _, _, _ := p.ReadFrom(b)
-		packetHandler(b, n)
-	}
-}
-
-// process each multicast packet, pass along those for assembly
-func packetHandler(b []byte, n int) {
-	msg := b[24:n]
-	msg = removeAll(msg, breaker)               // take out MPEG packet breaks
-	//if bytes.Index(msg, []byte("CMAC")) == -1 { // process if not CMAC message
-		assemble(msg)
-	//} else {
-		//go postXML("heartbeat")
-	//}
-}
-
-func assemble(msg []byte) {
-
-	// if packet contains "<?xml ", start a new message
-	st := bytes.Index(msg, []byte("<?xml "))
-	if st != -1 {
-		if !inMessage {
-			inMessage = true
-			msg = msg[st:] // trim off leading garbage
-			//log.Println(string(msg)+"\n")
-		}
-		message = make([]byte, 0) // init a new message
-	}
-
-	// if packet contains "</ale" it's the end of the message
-	en := bytes.Index(msg, []byte("</ale"))
-	if inMessage && en != -1 {
-		msg = msg[:en]                           // trim off trailing garbage
-		msg = append(msg, []byte("</alert>")...) // repair the closing tag
-		message = append(message, msg...)
-		inMessage = false
-		print(message, "CAP received")
-		alert := cap.ParseCAP([]byte(message))
-		fmt.Println(cap.FormatCAP(alert))
-		warndb.ToDB(alert, string(message))
-		//go postXML(string(message))
-		return
-	}
-
-	// likewise if packet contains  "</CMAC_Alert_Attr" it's the end of the message
-	en = bytes.Index(msg, []byte("</CMAC_Alert_Attr"))
-	if inMessage && en != -1 {
-		msg = msg[:en]                           					// trim off trailing garbage
-		msg = append(msg, []byte("</CMAC_Alert_Attributes>")...) 	// repair the closing tag
-		message = append(message, msg...)
-		inMessage = false
-		log.Println("CMAM")
-		//print(message, "CMAC received")
-		//go postXML(string(message))
-		return
-	}
-
-	// otherwise, if we're inside a message, append it
-	if inMessage {
-		message = append(message, msg...)
-	}
-}
-
-
-
-// remove all instances of a byte slice from within another byte slice
-func removeAll(source []byte, remove []byte) []byte {
-	for bytes.Index(source, remove) > -1 {
-		pnt := bytes.Index(source, remove)
-		source = append(source[:pnt], source[pnt+12:]...)
-	}
-	return source
-}
-
-
-func print(message []byte, tpe string) {
-	st := bytes.Index(message, []byte("<CMAC_status>System</CMAC_status>"))
-	t := tpe
-	if st != -1 {
-		t = "System Check Message"
-	}
-	fmt.Println("\n",t)
-	fmt.Println("-------------------------------------"[:len(t)+2])
-	fmt.Println(string(message), "\n")
 }
