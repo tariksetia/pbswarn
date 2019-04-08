@@ -1,3 +1,13 @@
+/**************************************************************
+ *
+ *  Copyright (c) 2019 Public Broadcasting Service
+ *  Contact: <warn@pbs.org>
+ *  All Rights Reserved.
+ *
+ *  Version 1.3 4/8/2019
+ *
+ *************************************************************/
+
 package warndb
 
 import (
@@ -32,15 +42,18 @@ func ToDB(alert cap.Alert, xml string) {
 	for rows.Next() {
 		err = rows.Scan(&cnt)
 	}
-	// if no existing match, post to database
+	// if an existing match, ignore as dupe
 	if cnt > 0 {
 		log.Println("DUPLICATE:", alert.Identifier+","+alert.Sender+","+alert.Sent)
 
+		// otherwise post to DB
 	} else {
 
 		// add the Alert
-		statement, err = db.Prepare("insert into alerts (identifier, sender, sent, status, msgType, source, code, note) values (?, ?, ?, ?, ?, ?, ?, ?)")
-		res, err := statement.Exec(alert.Identifier, alert.Sender, alert.Sent, alert.Status, alert.MessageType, alert.Source, alert.Code, alert.Note)
+		statement, err = db.Prepare("insert into alerts (identifier, sender, sent, status, msgType, source, scope,  code, note, refs, replacedBy) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+		// , scope, restriction, addresses, references, incidents
+		res, err := statement.Exec(alert.Identifier, alert.Sender, alert.Sent, alert.Status, alert.MessageType, alert.Source, alert.Scope, alert.Code, alert.Note, alert.References, "")
+
 		if err != nil {
 			log.Println("Insert alert error:", err)
 		} else {
@@ -48,8 +61,18 @@ func ToDB(alert cap.Alert, xml string) {
 			if err != nil {
 				log.Println(err)
 			}
-			fmt.Println("Added alert number", alertID)
+			log.Println("Added alert number", alertID, alert.Identifier+","+alert.Sender+","+alert.Sent)
 		}
+
+		// add some less-used fields
+		// alert.Restriction, alert.Addresses, alert.Incidents
+		//s := "update alerts set references = '" + alert.References + "' where id = " + strconv.FormatInt(alertID, 10)
+		//fmt.Println(s)
+		//_, err = db.Exec(s)
+		//if err != nil {
+		//	log.Println("Update to alert error:", err)
+		//}
+
 		// add the raw XML
 		statement, err = db.Prepare("insert into CAP (alertId, xml) values (?,?)")
 		if err != nil {
