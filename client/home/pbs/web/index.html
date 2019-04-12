@@ -12,81 +12,30 @@
 </head>
 
 <body>
-	
-    <div id="main_div" >
-        <table id="main_table">
-            <tr>
-                <td>
-                    <div class="alert_head_div">
-                        <table id="alert_row">
-                            <tr>
-                                <td>[sent]</td>
-                                <td>[sender]</td>
-                                <td>[status]</td>
-                                <td>[msgType]</td>
-                                <td>[note]</td>
-                            </tr>
-                        </table>
-                    </div>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <div class="info_div">
-                       <table>
-                            <tr>
-                                <td><a href="javascript:toggle()">[headline/event]</a></td>
-                                <td>[senderName]</td>
-                                <td>[lang]</td>
-                                <td>[response]</td>
-                                <td>[categories]</td>
-                                <td>[urgency]</td>
-                                <td>[severity]</td>
-                                <td>[certainty]</td>
-                            </tr>
-                        </table>
-                      </div>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <div id="info_detail_div">
-                        <table>
-                            <tr>
-                                <td>[CMAMtext]</td>
-                            </tr>
-                            <tr>
-                                <td>[description]</td>
-                            </tr>
-                            <tr>
-                                <td>[instruction]</td>
-                            </tr>
-                            <tr>
-                                <td>[web]</td>
-                             </tr>
-                            <tr>  
-                                <td>[contact]</td>
-                            </tr>
-                            <tr>
-                                <td>[parameters]</td>
-                            </tr>
-                            <tr>
-                                <td>[resources]</td>
-                            </tr>
-                            <tr>
-                                <td>[areas]</td>
-                            </tr>
-                        </table>
-                    </div>
-                </td>
-            </tr>                                                
-        </table>
-    </div>
+  <div id="logo"><img src="img/pbs_logo_black_button_white_text.png">&nbsp;WARN Datacast</div>
+  <div id="masterDiv"></div>
+ 
+  <div id="filterDiv">
+    View:<br> <br>
+    <input type="checkbox" name="Geo" checked class="styled">Geo <br>
+    <input type="checkbox" name="Met" checked class="styled">Met <br>
+    <input type="checkbox" name="Safety" checked class="styled">Safety <br>
+    <input type="checkbox" name="Security" checked class="styled">Security <br>
+    <input type="checkbox" name="Rescue" checked class="styled">Rescue <br>
+    <input type="checkbox" name="Fire" checked class="styled">Fire <br>
+    <input type="checkbox" name="Health" checked class="styled">Health <br>
+    <input type="checkbox" name="Env" checked class="styled">Env <br>
+    <input type="checkbox" name="Transport" checked class="styled">Transport <br>
+    <input type="checkbox" name="Infra" checked class="styled">Infra <br>
+    <input type="checkbox" name="CBRNE" checked class="styled">CBRNE <br>
+    <input type="checkbox" name="Other" checked class="styled">Other <br>
+    <br>
+    <input type="checkbox" name="ExpiredCB" id="ExpiredCB">Expired
+  </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.js" crossorigin="anonymous"></script>
-
-    <script src="js/warn.js"></script>
+<script src="js/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
+<script src="js/luxon.min.js"></script>
+<script src="js/warn.js"></script>
     
 </body>
-
 </html>
