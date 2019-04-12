@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.3 4/8/2019
+ *  Version 1.4 4/11/2019
  *
  *************************************************************/
 
@@ -143,7 +143,7 @@ func ToDB(alert cap.Alert, xml string) {
 
 			// add Resources
 			for _, resource := range info.Resources {
-				statement, err = db.Prepare("insert into resources (infoId, description, mimeType, size, uri, derefUri, digest) values (?, ?, ?, ?, ?, ?, ?)")
+				statement, err = db.Prepare("insert into resources (infoId, resourceDesc, mimeType, size, uri, derefUri, digest) values (?, ?, ?, ?, ?, ?, ?)")
 				if err != nil {
 					log.Println(err)
 				}
