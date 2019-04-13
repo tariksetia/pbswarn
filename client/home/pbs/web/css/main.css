@@ -173,6 +173,52 @@ table {
     color: paleturquoise;
 }
 
+#infoViewer {
+    max-width: 60%;
+    min-width: 60%;
+    max-height: 85%;
+    background-color: #312619;
+    border-style: solid;
+    border-width: 1px;
+    border-color: rgb(241, 240, 219);
+    position: fixed;
+    left: 20%;
+    top: 10%;
+    padding: 5px;
+    padding-bottom: 10px;
+    z-index: 100;
+    overflow-y: auto;
+}
+
+#infoTable {
+    margin-left: 10px;
+}
+
+.label {
+    font-weight:  normal;
+    font-size: smaller;
+    color: #ffffff66;
+    min-width: 60px;
+    min-width: 60px;
+    text-align: right;
+    vertical-align: top;
+}
+
+#infoViewCloser {
+    position:absolute;
+    cursor: pointer;
+    right: 5px;
+    top: 5px;
+    align-content: flex-end;
+    max-width: 10px;
+    padding:3px;
+    z-index: 200;
+    margin: 0 auto;
+    border-style: solid;
+    border-width: 1px;
+    border-color: rgb(241, 240, 219);
+}
+
 /*
  * Remove the gap between audio, canvas, iframes,
  * images, videos and the bottom of their containers:
