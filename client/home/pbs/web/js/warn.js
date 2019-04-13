@@ -1,4 +1,5 @@
 $(document).ready(function () {
+  hideInfoView()
   getAlerts()
   setInterval(update, 3000)
 })
@@ -14,6 +15,10 @@ $("#ExpiredCB").on('change', function () {
   $("#ExpiredCB").trigger('blur')
 })
 
+$("#infoViewCloser").on('click', function () {
+  hideInfoView()
+})
+
 function setLocalTimeZone(name) {
   DateTime.local().setZone(name)
 }
@@ -25,6 +30,77 @@ function getLocalTimeZone() {
 function clearDisplay() {
   $("#masterDiv").empty()
 }
+
+function showInfoView() {
+  $("#infoViewer").show()
+}
+
+function hideInfoView() {
+  $("#infoViewer").hide()
+  $("#infoDisplay").empty()
+}
+
+function showInfo(infoID) {
+  showInfoView()
+  $.ajax({
+    url: "/getInfo/" + infoID
+  }).then(function (data) {
+    var info = JSON.parse(data)
+    var i = info[0]
+    console.dir(i)
+    // build info into HTML table
+    var infoTab = "<table id='infoTable'>"
+    infoTab = infoTab + `<tr><td></td><td>`
+    infoTab = infoTab + `<table><tr>
+    <td class='urgency ${i["urgency"]}'>${i["urgency"]} </td>
+    <td class='severity ${i["severity"]}'>${i["severity"]}</td>
+    <td class='certainty ${i["certainty"]}'>${i["certainty"]}</td>
+    </tr></table>`
+    infoTab = infoTab + `</td></tr>`
+    if (i.headline !="") {
+      infoTab = infoTab + `<tr><td class='label'>HEADLINE:</td><td>${i.headline}</td></tr>`
+    }
+    if (i.cmam !="") {
+      infoTab = infoTab + `<tr><td class='label'>WEA&nbsp;TEXT:</td><td>${i.cmam}</td></tr>`
+    }
+
+    if (i.language != "") {
+      infoTab = infoTab + `<tr><td class='label'>LANG:</td><td>${i.language}</td></tr>`
+    } 
+    if (i.responseType != "") {
+      infoTab = infoTab + `<tr><td class='label'>RESPONSE:</td><td>${i.responseType} </td></tr>`
+    }
+    
+    infoTab = infoTab + `
+    <tr><td class='label'>EVENT:</td><td>${i.event}</td></tr>
+    <tr><td class='label'>SENDER:</td><td>${i.senderName}</td></tr>
+    <tr><td class='label'>CATEGORY:</td><td>${i.categories}</td></tr>
+    <tr><td class='label'>EXPIRES:</td><td>${i.expires}</td></tr>`
+    if (i.description != "") {
+      infoTab = infoTab + 
+      `<tr><td class='label'>DESCRIPTION:</td><td>${i.description.replace(/\n/g, "<br>")} </td></tr>`
+    }
+    if (i.description != "") {
+      infoTab = infoTab + 
+        `<tr><td class='label'>INSTRUCTION:</td><td>${i.instruction}</td></tr>`
+    }
+    if (i.contact != "") {
+      infoTab = infoTab + `<tr><td class='label'>CONTACT:</td><td>${i.contact} </td></tr>`
+    }
+    if (i.web != "") {
+      infoTab = infoTab + `<tr><td class='label'>WEB:</td><td>${i.web}</td></tr>`
+    }
+    // add areas
+
+    // add resources
+
+    infoTab = infoTab + "</table>"
+    //console.log(infoTab)
+    $("#infoDisplay").html(infoTab)
+  })
+}
+
+
 
 async function update() {
   await getAlerts()
@@ -59,7 +135,7 @@ async function annotateAlert(id) {
   }).then(function (data) {
     //console.dir(id)
     infosObj = JSON.parse(data)
-    if (infosObj.length > 0) {
+    if (infosObj && infosObj.length > 0) {
       var alrt = getAlertReference(id)
       // add infos to this object
       alrt.infos = []
@@ -157,7 +233,4 @@ function alertIsExpired(alert) {
   return true
 }
 
-function showInfo(infoID) {
-  alert("Clicked on info " + infoID)
-}
 
