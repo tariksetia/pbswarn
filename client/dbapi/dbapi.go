@@ -192,6 +192,24 @@ func GetInfos(alert string) string {
 	return string(istring)
 }
 
+// GetInfos ... get infos for a specified alert
+func GetAllInfos() string {
+	statement, err := db.Prepare("select * from infos")
+	check(err)
+	rows, err := statement.Query()
+	check(err)
+	var infos []DbInfo
+	for rows.Next() {
+		var info DbInfo
+		err = rows.Scan(&info.ID, &info.AlertID, &info.Language, &info.Category, &info.Event, &info.ResponseType, &info.Urgency, &info.Severity, &info.Certainty, &info.Expires, &info.SenderName, &info.Slug, &info.Effective, &info.Onset, &info.Audience, &info.Headline, &info.CMAM, &info.Description, &info.Instruction, &info.Contact, &info.Web)
+		check(err)
+		infos = append(infos, info)
+	}
+	istring, err := json.MarshalIndent(infos, "", "   ")
+	check(err)
+	return string(istring)
+}
+
 //GetInfo ... get a single info by its local ID number
 func GetInfo(info string) string {
 	statement, err := db.Prepare("select * from infos where id = ?")
