@@ -1,7 +1,7 @@
 $(document).ready(function () {
   hideInfoView()
-  getAlerts()
-  setInterval(update, 3000)
+  update()
+  setInterval(update, 10000)
 })
 
 var alertObj
@@ -19,6 +19,10 @@ $("#infoViewCloser").on('click', function () {
   hideInfoView()
 })
 
+$("#masterDiv").on('click', function () {
+  hideInfoView()
+})
+
 function setLocalTimeZone(name) {
   DateTime.local().setZone(name)
 }
@@ -28,7 +32,57 @@ function getLocalTimeZone() {
 }
 
 function clearDisplay() {
+  console.log("clearDisplay")
   $("#masterDiv").empty()
+}
+
+async function update() {
+  console.log('[' + new Date().toUTCString() + '] ', "update")
+  await getAlerts()
+  updateDisplay()
+}
+
+// parce server data into global alertsObj, which is an array of alertObjs
+async function getAlerts() {
+  extAlerts = []
+  $.ajax({
+    url: "/getAlerts"
+  }).then(function (data) {
+    alertsObj = JSON.parse(data)
+    addInfos()
+  })
+}
+
+// to each alertObj add an [] of infoObjs
+async function addInfos() {
+  for (var key in alertsObj) {
+    aid = alertsObj[key].alertID
+    var alrt = getReferenceToAlert(aid)
+    var url = "/getInfos/" + aid
+    //console.log(url)
+    $.ajax({
+      url: url
+    }).then(function (data) {
+      //console.dir(data)
+      infosObj = JSON.parse(data)
+      if (infosObj && infosObj.length > 0) {
+        //var alrt = getReferenceToAlert(a)
+        // add infos to this object
+        alrt.infos = []
+        alrt.infos.push(infosObj)
+        alrt.expired = alertIsExpired(alrt)
+        // and compile into global extAlerts []
+        extAlerts.push(alrt)
+      }
+    })
+  }
+}
+
+function sortExtAlertsBySentTime() {
+  return extAlerts.sort(function (a, b) {
+    var x = DateTime.fromISO(a["sent"]); var y = DateTime.fromISO(b["sent"]);
+    return ((x > y) ? -1 : ((x < y) ? 1 : 0));
+  })
 }
 
 function showInfoView() {
@@ -41,13 +95,13 @@ function hideInfoView() {
 }
 
 function showInfo(infoID) {
+  console.log("showInfo", infoID)
   showInfoView()
   $.ajax({
     url: "/getInfo/" + infoID
   }).then(function (data) {
     var info = JSON.parse(data)
     var i = info[0]
-    console.dir(i)
     // build info into HTML table
     var infoTab = "<table id='infoTable'>"
     infoTab = infoTab + `<tr><td></td><td>`
@@ -82,7 +136,7 @@ function showInfo(infoID) {
     }
     if (i.description != "") {
       infoTab = infoTab + 
-        `<tr><td class='label'>INSTRUCTION:</td><td>${i.instruction}</td></tr>`
+        `<tr><td class='label'>INSTRUCTION:</td><td>${i.instruction.replace(/\n/g, "<br>")}</td></tr>`
     }
     if (i.contact != "") {
       infoTab = infoTab + `<tr><td class='label'>CONTACT:</td><td>${i.contact} </td></tr>`
@@ -95,70 +149,13 @@ function showInfo(infoID) {
     // add resources
 
     infoTab = infoTab + "</table>"
-    //console.log(infoTab)
     $("#infoDisplay").html(infoTab)
-  })
-}
-
-
-
-async function update() {
-  await getAlerts()
-}
-
-// parce server data into global alertsObj, which is an array of alertObjs
-async function getAlerts() {
-  extAlerts = []
-  $.ajax({
-    url: "/getAlerts"
-  }).then(function (data) {
-    alertsObj = JSON.parse(data)
-    addInfos()
-  })
-}
-
-// to each alertObj add an [] of infoObjs
-async function addInfos() {
-  for (var key in alertsObj) {
-    a = alertsObj[key].alertID
-    getAlertReference(a)
-    await annotateAlert(a)
-  }
-}
-
-async function annotateAlert(id) {
-  id = id.alertID // not sure why this is necessary
-  var myAlert = getAlertReference(id)
-  var url = "/getInfos/" + id
-  $.ajax({
-    url: url
-  }).then(function (data) {
-    //console.dir(id)
-    infosObj = JSON.parse(data)
-    if (infosObj && infosObj.length > 0) {
-      var alrt = getAlertReference(id)
-      // add infos to this object
-      alrt.infos = []
-      alrt.infos.push(infosObj)
-      alrt.expired = alertIsExpired(alrt)
-      //console.log(alrt)
-      // and compile into global extAlerts []
-      extAlerts.push(alrt)
-      updateDisplay()
-    }
-  })
-}
-
-function sortExtAlertsBySentTime() {
-  return extAlerts.sort(function (a, b) {
-    var x = DateTime.fromISO(a["sent"]); var y = DateTime.fromISO(b["sent"]);
-    return ((x > y) ? -1 : ((x < y) ? 1 : 0));
   })
 }
 
 // push a sorted array of alerts into the display
 function updateDisplay() {
-  //console.log("updateDisplay")
+  console.log('[' + new Date().toUTCString() + '] ', "updateDisplay")
   var cellPointer = 0
   sortExtAlertsBySentTime()
   for (var key in extAlerts) {
@@ -180,6 +177,7 @@ function updateDisplay() {
 }
 
 function replaceCell(alert, cellPointer) {
+  //console.log("replaceCell", cellPointer)
   var sent = alert["sent"]
   var newDivHTML
   sent = DateTime.fromISO(sent).toFormat("HH':'mm':'ss - LL'/'dd'/'yyyy ZZZZ")
@@ -214,7 +212,8 @@ function replaceCell(alert, cellPointer) {
   $cellDiv.replaceWith($newDiv[0])
 }
 
-function getAlertReference(id) {
+function getReferenceToAlert(id) {
+  //console.log("getReferenceToAlert", id)
   for (var key in alertsObj) {
     a = alertsObj[key]
     if (a.alertID == id) {
