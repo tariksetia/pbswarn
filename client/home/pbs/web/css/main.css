@@ -28,18 +28,18 @@ table {
 #masterDiv {
     position: fixed;
     left: 15px;
-    top:65px;
+    top:70px;
     max-width:85%;
     min-width:85%;
     max-height: 83%;
     overflow: auto;
 }
 
-#masterDiv::-webkit-scrollbar {
+::-webkit-scrollbar {
     width: 4px;
 }
 
-#masterDiv::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb {
     width: 4px;
     background-color: #ffffff11;
 
@@ -52,7 +52,7 @@ table {
 }
 
 .expired {
-    opacity: 0.5;
+    opacity: 0.4;
     background-color: #ffffff00;
 }
 
