@@ -4,14 +4,6 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.4 4/11/2019
- *
- ***/**************************************************************
- *
- *  Copyright (c) 2019 Public Broadcasting Service
- *  Contact: <warn@pbs.org>
- *  All Rights Reserved.
- *
  *  Version 1.5 4/14/2019
  *
  *************************************************************/
