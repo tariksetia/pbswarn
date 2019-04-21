@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.2 4/8/2019
+ *  Version 1.2 4/8/2019 // obsoleted by capture.go
  *
  *************************************************************/
 
