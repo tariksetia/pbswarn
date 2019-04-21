@@ -1,3 +1,7 @@
+/*
+4/20/2019
+*/
+
 package main
 
 import (
@@ -21,9 +25,9 @@ func main() {
 // InitDBs ...
 func InitDBs() {
 
-	os.Remove("/home/pbs/warn.db")
+	os.Remove("/home/pi/warn.db")
 
-	db, err = sql.Open("sqlite3", "/home/pbs/warn.db")
+	db, err = sql.Open("sqlite3", "/home/pi/warn.db")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -96,6 +100,14 @@ func InitDBs() {
 	sqlStmt = `
 	create table CAP (id integer not null primary key, alertId text, xml text);
 	delete from CAP;
+	`
+	execute(sqlStmt)
+
+	// create Uptime table
+	sqlStmt = `
+	create table uptime (id integer not null primary key, lastActivity text);
+	delete from uptime;
+	insert into uptime values ('1', '00');
 	`
 	execute(sqlStmt)
 
