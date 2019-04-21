@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.3 4/20/2019
+ *  Version 1.4 4/21/2019
  *
  *************************************************************/
 
@@ -17,6 +17,7 @@ import (
 	"log"
 	"logging"
 	"net"
+	"strconv"
 	"strings"
 
 	"../cap"
@@ -87,21 +88,28 @@ func main() {
 	if err != nil {
 		log.Fatal("InterfaceByName", err)
 	}
-	group := net.IPv4(224, 3, 0, 1)
-	c, err := net.ListenPacket("udp4", cfg.Multicast)
+	adr := strings.Split(cfg.Multicast, ":")
+	ad := strings.Split(adr[0], ".")
+	a, _ := strconv.Atoi(ad[0])
+	b, _ := strconv.Atoi(ad[1])
+	c, _ := strconv.Atoi(ad[2])
+	d, _ := strconv.Atoi(ad[3])
+
+	group := net.IPv4(byte(a), byte(b), byte(c), byte(d))
+	conn, err := net.ListenPacket("udp4", cfg.Multicast)
 	if err != nil {
 		log.Fatal("ListenPacket", err)
 	}
-	defer c.Close()
-	p := ipv4.NewPacketConn(c)
+	defer conn.Close()
+	p := ipv4.NewPacketConn(conn)
 	if err := p.JoinGroup(eth0, &net.UDPAddr{IP: group}); err != nil {
 		log.Fatal("JoinGroup", err)
 	}
-	b := make([]byte, 1500)
+	bs := make([]byte, 1500)
 	log.Println("Starting multicast monitoring from WARN receiver on " + cfg.Multicast + "\n")
 	for {
-		n, _, _, _ := p.ReadFrom(b)
-		packetHandler(b, n)
+		n, _, _, _ := p.ReadFrom(bs)
+		packetHandler(bs, n)
 	}
 }
 
