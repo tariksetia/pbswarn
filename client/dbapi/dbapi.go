@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.3 4/11/2019
+ *  Version 1.4 4/20/2019
  *
  *************************************************************/
 
@@ -86,7 +86,7 @@ type DbResource struct {
 	InfoID      string `json:"infoID"`
 	Description string `json:"description"`
 	MimeType    string `json:"mime_type"`
-	Size        int    `json:"size"`
+	Size        string `json:"size"`
 	URI         string `json:"uri"`
 	Digest      string `json:"digest"`
 	DerefURI    string `json:"deref_uri"`
@@ -141,10 +141,28 @@ func main() {
 }
 
 func init() {
-	db, err = sql.Open("sqlite3", "/home/pbs/warn.db")
+	db, err = sql.Open("sqlite3", "/home/pi/warn.db")
 	if err != nil {
 		log.Println("DB open err:", err)
 	}
+}
+
+// GetUptime .. returns latest network activity time from DB
+func GetUptime() string {
+	var id string
+	var lastActivity string
+	statement, err := db.Prepare("select * from uptime where id='1'")
+	check(err)
+	row := statement.QueryRow()
+	switch err := row.Scan(&id, &lastActivity); err {
+	case sql.ErrNoRows:
+		fmt.Println("No rows were returned!")
+	case nil:
+
+	default:
+		panic(err)
+	}
+	return "{\"lastActivity\":\"" + lastActivity + "Z\"}"
 }
 
 // GetAlerts ... get alerts in batches of 12 from specified offset
@@ -273,7 +291,7 @@ func GetResources(info string) string {
 	var ress []DbResource
 	for rows.Next() {
 		var res DbResource
-		err = rows.Scan(&res.ID, &res.InfoID, &res.Description, &res.MimeType, &res.URI, &res.Size, &res.DerefURI)
+		err = rows.Scan(&res.ID, &res.InfoID, &res.Description, &res.MimeType, &res.Size, &res.URI, &res.Digest, &res.DerefURI)
 		check(err)
 		ress = append(ress, res)
 	}
