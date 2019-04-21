@@ -2,7 +2,7 @@
 Client-side utility to monitor MQTT feed.
 
 Copyright 2019 America's Public Television Stations
-4/20/2019
+4/21/2019
 */
 
 package main
@@ -59,10 +59,9 @@ func main() {
 
 	// Client's callback handler for new messages
 	msgRcvd := func(client mqtt.Client, message mqtt.Message) {
-		//t := time.Now()
 		//src := message.Topic()
 		txt := string(message.Payload())
-		//log.Println(t.Format(time.Stamp), src)
+		//log.Println(time.Now().Format(time.Stamp), src)
 		multicast(txt)
 
 	}
@@ -80,6 +79,7 @@ func main() {
 }
 
 func multicast(txt string) {
+	//log.Println("forwarder-client.multicast:", txt)
 	_, err = c.Write([]byte(txt))
 	if err != nil {
 		log.Println("forwarder-client.multicast error:", err)
