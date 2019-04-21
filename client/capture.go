@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.2 4/5/2019
+ *  Version 1.3 4/20/2019
  *
  *************************************************************/
 
@@ -133,6 +133,7 @@ func assemble(msg []byte) {
 		inMessage = false
 		alert := cap.ParseCAP([]byte(message))
 		warndb.ToDB(alert, string(message))
+		warndb.Uptime()
 		return
 	}
 
@@ -144,7 +145,7 @@ func assemble(msg []byte) {
 		message = append(message, msg...)
 		inMessage = false
 		log.Println("CMAM")
-		// not stored to database
+		warndb.Uptime()
 		return
 	}
 
@@ -162,16 +163,3 @@ func removeAll(source []byte, remove []byte) []byte {
 	}
 	return source
 }
-
-/*
-func print(message []byte, tpe string) {
-	st := bytes.Index(message, []byte("<CMAC_status>System</CMAC_status>"))
-	t := tpe
-	if st != -1 {
-		t = "System Check Message"
-	}
-	fmt.Println("\n", t)
-	fmt.Println("-------------------------------------"[:len(t)+2])
-	fmt.Println(string(message), "\n")
-}
-*/
