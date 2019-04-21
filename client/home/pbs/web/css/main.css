@@ -23,6 +23,33 @@ table {
     position: fixed;
     left: 25px;
     font-size: large;
+    font-weight: bold;
+}
+
+#clock {
+    position: fixed;
+    text-align: right;
+    right: 10px;
+    top: 10px;
+    font-size: xx-large;
+    width: 300px;
+    height:00px;
+    color: #ffffff99;
+    z-index: 300;
+    font-weight: lighter;
+}
+
+#uptimer {
+    position: fixed;
+    text-align: right;
+    right: 10px;
+    top: 50px;
+    width: 160px;
+    height:15px;
+    font-size: smaller;
+    font-weight: 800;
+    color: #ffffff99;
+    z-index: 300;
 }
 
 #masterDiv {
@@ -52,7 +79,7 @@ table {
 }
 
 .expired {
-    opacity: 0.4;
+    opacity: 0.8;
     background-color: #ffffff00;
 }
 
@@ -99,7 +126,6 @@ table {
 }
 
 .senderName {
-
     vertical-align: top;
 }
 
@@ -176,7 +202,7 @@ table {
 #infoViewer {
     max-width: 60%;
     min-width: 60%;
-    max-height: 85%;
+    max-height: 80%;
     background-color: #312619;
     border-style: solid;
     border-width: 1px;
