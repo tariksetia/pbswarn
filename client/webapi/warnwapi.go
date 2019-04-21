@@ -4,14 +4,13 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.0 4/8/2019
+ *  Version 1.1 4/20/2019
  *
  *************************************************************/
 
 package main
 
 import (
-	"log"
 	"net/http"
 	"strings"
 
@@ -31,24 +30,27 @@ func main() {
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	})
 	r.Use(cors.Handler)
-	FileServer(r, "/client", http.Dir("/home/pbs/web"))
+	FileServer(r, "/client", http.Dir("/home/pi/web"))
+	r.Get("/getUptime", func(w http.ResponseWriter, r *http.Request) {
+		//log.Println("getAlerts()")
+		w.Write([]byte(dbapi.GetUptime()))
+	})
 	r.Get("/getAlerts", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("getAlerts()")
+		//log.Println("getAlerts()")
 		w.Write([]byte(dbapi.GetAlerts()))
 	})
 	r.Get("/getInfos/{alert}", func(w http.ResponseWriter, r *http.Request) {
 		val := chi.URLParam(r, "alert")
-		//spew.Dump(val)
-		log.Println("getInfos()", val)
+		//log.Println("getInfos()", val)
 		w.Write([]byte(dbapi.GetInfos(val)))
 	})
-	r.Get("/getAllInfos/", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("getAllInfos()")
+	r.Get("/getAllInfos", func(w http.ResponseWriter, r *http.Request) {
+		//log.Println("getAllInfos()")
 		w.Write([]byte(dbapi.GetAllInfos()))
 	})
 	r.Get("/getInfo/{info}", func(w http.ResponseWriter, r *http.Request) {
 		val := chi.URLParam(r, "info")
-		log.Println("getInfo()", val)
+		//log.Println("getInfo()", val)
 		w.Write([]byte(dbapi.GetInfo(val)))
 	})
 	r.Get("/getParameters/{info}", func(w http.ResponseWriter, r *http.Request) {
