@@ -1,37 +1,21 @@
+// 4/20/2019
+
 
 $(document).ready(function () {
+  window.addEventListener("focus", function() {
+      updateDisplay(alertsObj)
+  })
   hideInfoView()
+  showTime()
+  clockTimer = setInterval(showTime, 200)
+  uptm = setInterval(showUptime, 7000)
   update()
-  //timer = setInterval(update, 3000)
-})
-
-$("#ExpiredCB").on('change', function () {
-  clearInterval(timer) // stop existing timer
-  clearDisplay()
-  updateDisplay()
-  $("#ExpiredCB").trigger('blur')
-  timer = setInterval(update, 6000) // launch new timer
-})
-
-$(".filter").on('change', function (e) {
-  clearInterval(timer) // stop existing timer
-  clearDisplay()
-  updateDisplay()
-  $(".filter").trigger('blur')
-  timer = setInterval(update, 3000) // launch new timer
-})
-
-$("#infoViewCloser").on('click', function () {
-  hideInfoView()
-})
-
-$("#masterDiv").on('click', function () {
-  hideInfoView()
+  timer = setInterval(update, 3000)
 })
 
 
 async function update() {
-  console.log('[' + new Date().toUTCString() + '] ', "update")
+  //console.log('[' + new Date().toUTCString() + '] ', "update")
   alertsObj = await getAlerts()
   alertsObj = await attachInfos(alertsObj)
   updateDisplay(alertsObj)
@@ -48,9 +32,7 @@ function hideInfoView() {
 
 // sort alerts and push into the display
 function updateDisplay(alertsObj) {
-  console.log('[' + new Date().toUTCString() + '] ', "updateDisplay")
-  // read the checkboxes
-  stopCats = getStopCats()
+  //console.log('[' + new Date().toUTCString() + '] ', "updateDisplay")
   var sorted = sortAlertsBySentTime()
   var cellPointer = 0
   for (var key in sorted) {
@@ -65,7 +47,7 @@ function updateDisplay(alertsObj) {
     var filterPass = false
     for (var key in alert["infos"]) {
       var info = alert.infos[key]
-      if (stopCats.indexOf(info.categories) == -1) {
+      if (getStopCats().indexOf(info.categories) == -1) {
         filterPass = true
       }
     }
@@ -105,7 +87,7 @@ function replaceCell(alert, cellPointer) {
   for (var key in alert.infos) {
     // determine if info passes filters
     var n = alert.infos[key]
-    if (stopCats.indexOf(n.categories) > -1) {
+    if (getStopCats().indexOf(n.categories) > -1) {
       continue
     }
     var $infoDiv = $("<div class='infoDiv' id='info" + n["infoID"] + "'><table><tr>" +
