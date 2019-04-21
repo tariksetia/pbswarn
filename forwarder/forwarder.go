@@ -1,9 +1,9 @@
-// 4/20/2019
+// 4/21/2019
+
 package main
 
 import (
 	"log"
-	"logging"
 	"net"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -29,12 +29,12 @@ func main() {
 		log.Fatal("InterfaceByName", err)
 	}
 	group := net.IPv4(224, 3, 0, 1)
-	c, err := net.ListenPacket("udp4", multicast)
+	conn, err := net.ListenPacket("udp4", multicast)
 	if err != nil {
 		log.Fatal("ListenPacket", err)
 	}
-	defer c.Close()
-	p := ipv4.NewPacketConn(c)
+	defer conn.Close()
+	p := ipv4.NewPacketConn(conn)
 	if err := p.JoinGroup(eth0, &net.UDPAddr{IP: group}); err != nil {
 		log.Fatal("JoinGroup", err)
 	}
@@ -43,7 +43,7 @@ func main() {
 		broker + " topic " + topic)
 	for {
 		n, _, _, _ := p.ReadFrom(b)
-		//log.Println("got packet")
+		//log.Println(string(b))
 		packetHandler(b, n)
 	}
 }
@@ -52,6 +52,6 @@ func packetHandler(b []byte, n int) {
 	if token := c.Publish(topic, 1, false, string(b)); token.Wait() && token.Error() != nil {
 		err := token.Error()
 		estring := err.Error()
-		logging.Log("datacastTester.main", estring)
+		log.Println("datacastTester.main", estring)
 	}
 }
