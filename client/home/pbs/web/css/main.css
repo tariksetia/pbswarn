@@ -5,7 +5,7 @@ html {
     font-size: 10pt;
 }
 
-a {
+a { 
     color: lightblue;
     text-decoration: none;
 }
@@ -79,7 +79,7 @@ table {
 }
 
 .expired {
-    opacity: 0.8;
+    opacity: 0.6;
     background-color: #ffffff00;
 }
 
@@ -240,6 +240,50 @@ table {
     padding:3px;
     z-index: 200;
     margin: 0 auto;
+    border-style: solid;
+    border-width: 1px;
+    border-color: rgb(241, 240, 219);
+}
+
+#rawViewer {
+    max-width: 60%;
+    min-width: 60%;
+    max-height: 80%;
+    background-color: #312619;
+    border-style: solid;
+    border-width: 1px;
+    border-color: rgb(241, 240, 219);
+    position: fixed;
+    left: 20%;
+    top: 10%;
+    padding: 5px;
+    padding-bottom: 10px;
+    z-index: 250;
+    overflow-y: auto;
+    pointer-events: none;
+}
+
+
+#rawViewCloser {
+    position:absolute;
+    cursor: pointer;
+    right: 5px;
+    top: 5px;
+    align-content: flex-end;
+    max-width: 10px;
+    padding:3px;
+    z-index: 300;
+    margin: 0 auto;
+    border-style: solid;
+    border-width: 1px;
+    border-color: rgb(241, 240, 219);
+    pointer-events: auto;
+}
+
+#rawCapButton {
+    z-index: 200;
+    margin: 0 auto;
+    padding:3px;
     border-style: solid;
     border-width: 1px;
     border-color: rgb(241, 240, 219);
