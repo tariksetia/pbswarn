@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.4 4/20/2019
+ *  Version 1.5 5/12/2019
  *
  *************************************************************/
 
@@ -134,23 +134,13 @@ var db *sql.DB
 var rows *sql.Rows
 var err error
 
-func main() {
-	defer db.Close()
-	j := GetCAP("2")
-	fmt.Println(j)
-}
-
-func init() {
-	db, err = sql.Open("sqlite3", "/home/pi/warn.db")
-	if err != nil {
-		log.Println("DB open err:", err)
-	}
-}
-
 // GetUptime .. returns latest network activity time from DB
 func GetUptime() string {
 	var id string
 	var lastActivity string
+	db, err = sql.Open("sqlite3", "/home/pi/warn.db")
+	check(err)
+	defer db.Close()
 	statement, err := db.Prepare("select * from uptime where id='1'")
 	check(err)
 	row := statement.QueryRow()
@@ -167,7 +157,10 @@ func GetUptime() string {
 
 // GetAlerts ... get alerts in batches of 12 from specified offset
 func GetAlerts() string {
-	statement, err := db.Prepare("select * from alerts order by id desc")
+	db, err = sql.Open("sqlite3", "/home/pi/warn.db")
+	check(err)
+	defer db.Close()
+	statement, err := db.Prepare("select * from alerts order by id desc limit 100")
 	check(err)
 	rows, err := statement.Query()
 	check(err)
@@ -194,6 +187,9 @@ func GetAlerts() string {
 
 // GetInfos ... get infos for a specified alert
 func GetInfos(alert string) string {
+	db, err = sql.Open("sqlite3", "/home/pi/warn.db")
+	check(err)
+	defer db.Close()
 	statement, err := db.Prepare("select * from infos where alertId = ?")
 	check(err)
 	rows, err := statement.Query(alert)
@@ -210,9 +206,12 @@ func GetInfos(alert string) string {
 	return string(istring)
 }
 
-// GetInfos ... get infos for a specified alert
-func GetAllInfos() string {
-	statement, err := db.Prepare("select * from infos")
+// GetAllInfos ... get infos for a specified alert and thereafter
+func GetAllInfos(earliest string) string {
+	db, err = sql.Open("sqlite3", "/home/pi/warn.db")
+	check(err)
+	defer db.Close()
+	statement, err := db.Prepare("select * from infos where alertID >= " + earliest)
 	check(err)
 	rows, err := statement.Query()
 	check(err)
@@ -230,6 +229,9 @@ func GetAllInfos() string {
 
 //GetInfo ... get a single info by its local ID number
 func GetInfo(info string) string {
+	db, err = sql.Open("sqlite3", "/home/pi/warn.db")
+	check(err)
+	defer db.Close()
 	statement, err := db.Prepare("select * from infos where id = ?")
 	check(err)
 	rows, err := statement.Query(info)
@@ -248,6 +250,9 @@ func GetInfo(info string) string {
 
 // GetParameters ... get parameters for a specified info
 func GetParameters(info string) string {
+	db, err = sql.Open("sqlite3", "/home/pi/warn.db")
+	check(err)
+	defer db.Close()
 	statement, err := db.Prepare("select * from parameters where infoId = ?")
 	check(err)
 	rows, err := statement.Query(info)
@@ -266,6 +271,9 @@ func GetParameters(info string) string {
 
 // GetEventCodes ... get eventCodes for specified info
 func GetEventCodes(info string) string {
+	db, err = sql.Open("sqlite3", "/home/pi/warn.db")
+	check(err)
+	defer db.Close()
 	statement, err := db.Prepare("select * from eventCodes where infoId = ?")
 	check(err)
 	rows, err := statement.Query(info)
@@ -284,6 +292,9 @@ func GetEventCodes(info string) string {
 
 // GetResources ... get resources for specified info
 func GetResources(info string) string {
+	db, err = sql.Open("sqlite3", "/home/pi/warn.db")
+	check(err)
+	defer db.Close()
 	statement, err := db.Prepare("select * from resources where infoId = ?")
 	check(err)
 	rows, err := statement.Query(info)
@@ -302,6 +313,9 @@ func GetResources(info string) string {
 
 // GetAreas ... get areas for specified info
 func GetAreas(info string) string {
+	db, err = sql.Open("sqlite3", "/home/pi/warn.db")
+	check(err)
+	defer db.Close()
 	statement, err := db.Prepare("select * from areas where infoId = ?")
 	check(err)
 	rows, err := statement.Query(info)
@@ -320,6 +334,9 @@ func GetAreas(info string) string {
 
 // GetPolygons ... get polygons for specified area
 func GetPolygons(area string) string {
+	db, err = sql.Open("sqlite3", "/home/pi/warn.db")
+	check(err)
+	defer db.Close()
 	statement, err := db.Prepare("select * from polygons where areaId = ?")
 	check(err)
 	rows, err := statement.Query(area)
@@ -338,6 +355,9 @@ func GetPolygons(area string) string {
 
 // GetCircles ... get circles for specified area
 func GetCircles(area string) string {
+	db, err = sql.Open("sqlite3", "/home/pi/warn.db")
+	check(err)
+	defer db.Close()
 	statement, err := db.Prepare("select * from circles where areaId = ?")
 	check(err)
 	rows, err := statement.Query(area)
@@ -356,6 +376,9 @@ func GetCircles(area string) string {
 
 // GetGeocodes ... get geocodes for specified area
 func GetGeocodes(area string) string {
+	db, err = sql.Open("sqlite3", "/home/pi/warn.db")
+	check(err)
+	defer db.Close()
 	statement, err := db.Prepare("select * from geocodes where areaId = ?")
 	check(err)
 	rows, err := statement.Query(area)
@@ -374,6 +397,9 @@ func GetGeocodes(area string) string {
 
 // GetCAP ... get CAP for specified alert
 func GetCAP(alert string) string {
+	db, err = sql.Open("sqlite3", "/home/pi/warn.db")
+	check(err)
+	defer db.Close()
 	statement, err := db.Prepare("select * from CAP where alertId = ?")
 	check(err)
 	rows, err := statement.Query(alert)
