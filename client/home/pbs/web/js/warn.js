@@ -1,109 +1,107 @@
-// 4/20/2019
+// 5/12/2019
 
+var alertObj
+var alertsObj = []
+var infosObj = []
+var extAlerts = []
 
+var updateTimer
+var uptimeTimer 
+var clockTimer
+var stopCats
+var DateTime = luxon.DateTime
+
+// on document ready, start the time, uptime and update timers
 $(document).ready(function () {
   window.addEventListener("focus", function() {
       updateDisplay(alertsObj)
   })
-  hideInfoView()
-  showTime()
-  clockTimer = setInterval(showTime, 200)
-  uptm = setInterval(showUptime, 7000)
-  update()
-  timer = setInterval(update, 3000)
-})
-
-
-async function update() {
-  //console.log('[' + new Date().toUTCString() + '] ', "update")
-  alertsObj = await getAlerts()
-  alertsObj = await attachInfos(alertsObj)
-  updateDisplay(alertsObj)
-}
-
-function showInfoView() {
-  $("#infoViewer").show()
-}
-
-function hideInfoView() {
+  // hide the Info Viewer 
   $("#infoViewer").hide()
   $("#infoDisplay").empty()
+  $("#rawViewer").hide()
+  $("#rawDisplay").empty()
+  // now start the timer intervals
+  clockTimer = setInterval(showTime, 200)
+  uptimeTimer  = setInterval(showUptime, 7000)
+  updateTimer = setInterval(update, 5000)
+  update()
+})
+
+// get current alerts, sort, annotate each with corresponding infos, and update the display
+async function update() {
+  alertsObj = await getAlerts()
+  alertsObj = await attachInfos(alertsObj)
+  alertsObj = await filterAlerts(alertsObj)
+  updateDisplay()
 }
 
-// sort alerts and push into the display
-function updateDisplay(alertsObj) {
-  //console.log('[' + new Date().toUTCString() + '] ', "updateDisplay")
-  var sorted = sortAlertsBySentTime()
-  var cellPointer = 0
-  for (var key in sorted) {
-    var alert = sorted[key]
-    // if the Expired checkbox is not checked, skip expired alerts
-    if (!$("#ExpiredCB").prop('checked')) { 
-      if (isExpired(alert)) {
-        continue
-      }
+// filter out expireds if user chooses, and block infos in user de-selected categories
+function filterAlerts(alertsObj) {
+  var filteredObj = []
+  // read expired checkbox
+  var showExpired = $("#ExpiredCB").prop('checked')
+  // get category-block vector
+  var stops = getStopCategories()
+  for (var key in alertsObj) {
+    var ok = true
+    var alert = alertsObj[key]
+    // skip any alert that's been updated or cancelled
+    if (alert.replacedBy != "") {
+      ok = false
     }
-    // determine if all infos pass filters
-    var filterPass = false
+    // if box not checked, skip expired alerts
+    if (!showExpired && isExpired(alert)) {
+      ok = false
+    }
+    // if all infos have a blocked category, filter out that alert
+    var allInfosBlocked = true
     for (var key in alert["infos"]) {
       var info = alert.infos[key]
-      if (getStopCats().indexOf(info.categories) == -1) {
-        filterPass = true
+      if (stops.indexOf(info.categories) == -1) {
+        allInfosBlocked = false
       }
     }
-    if (filterPass) {
-      replaceCell(alert, cellPointer)
-      cellPointer++
+    if (allInfosBlocked) {
+      ok = false
     }
-    // if we have more divs in masterDiv than needed, remove them
-    if ($("#masterDiv")[0].len > cellPointer) {
-      $("#masterDiv")[0] = $("#masterDiv")[0].slice(0, cellPointer)
+    if (ok) {
+      filteredObj.push(alert)
     }
+  }
+  return filteredObj
+}
+
+// push alerts into the display
+function updateDisplay() {
+  //console.log("updateDisplay")
+  var cellPointer = 0
+  $display = $("#masterDiv")
+  $display.empty()
+  for (var key in alertsObj) {
+    var alert = alertsObj[key]
+    replaceCell(alert, cellPointer)
+    cellPointer++
+  }
+  // and blank from end of list to end of display
+  while (cellPointer < $("#masterDiv")[0].len) {
+    blankCell(cellPointer)
+    cellPointer++
   }
 }
 
-
+// swap content into a selected cell (div) in the display
 function replaceCell(alert, cellPointer) {
-  topCats = getStopCats()
-  // skip any alert that's been updated or cancelled
-  if (alert.replacedBy != "") {
-    return
-  }
-  var sent = DateTime.fromISO(alert.sent).toFormat("HH':'mm':'ss - LL'/'dd'/'yyyy ZZZZ")
-  var newDivHTML
-  // if alert is expired, mark the div as class expired
-  if (isExpired(alert)) {
-    newDivHTML = "<div class='alertDiv expired' id='alert" + alert["alertID"] + "'><table><tr>"
-  } else {
-    newDivHTML = "<div class='alertDiv' id='alert" + alert["alertID"] + "'><table><tr>"
-  }
-  newDivHTML = newDivHTML +
-    "<td class='sent'>" + sent + "</td>" +
-    "<td class='identifier'>" + alert["identifier"] + "</td>" +
-    "<td class='sender'>" + alert["sender"] + "</td>" +
-    "<td class='status'>" + alert["status"] + " " + alert["scope"] + " " + alert["message_type"] + "</td>" +
-    "</tr></table></div>"
-  $newDiv = $(newDivHTML)
-  for (var key in alert.infos) {
-    // determine if info passes filters
-    var n = alert.infos[key]
-    if (getStopCats().indexOf(n.categories) > -1) {
-      continue
-    }
-    var $infoDiv = $("<div class='infoDiv' id='info" + n["infoID"] + "'><table><tr>" +
-      "<td class='urgency " + n["urgency"] + "'>" + n["urgency"] + "</td>" +
-      "<td class='severity " + n["severity"] + "'>" + n["severity"] + "</td>" +
-      "<td class='certainty " + n["certainty"] + "'>" + n["certainty"] + "</td>" +
-      "<td class='slug'><a href='javascript:showInfo(" + n["infoID"] + ")'>" + n["slug"] + "</a></td>" +
-      "<td class='senderName'>" + n["senderName"] + "</td>" +
-      "</tr></table></div>")
-    $newDiv.append($infoDiv)
-  }
-  //console.dir($newDiv)
-  // if we need another divs in masterDiv, make it
-  if (!$("#masterDiv")[0].children[cellPointer]) {
-    $("#masterDiv").append($("<div></div>"))
-  }
-  var $cellDiv = $("#masterDiv")[0].children[cellPointer]
-  $cellDiv.replaceWith($newDiv[0])
+  //console.log("replaceCell", alert.alertID, cellPointer)
+  $display = $("#masterDiv")
+  newDiv = alertToCellHTML(alert)
+  $display.append($(newDiv))
+  //console.log("cell appended", $display.length)
+}
+
+// blank out an unused cell
+function blankCell(cellPointer) {
+  // get a reference to pointed-at cell
+  var $cellDiv = $$display.children[cellPointer]
+  $cellDiv.replaceWith($("<div></div>"))
 }
