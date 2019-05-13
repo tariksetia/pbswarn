@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.1 4/20/2019
+ *  Version 1.0 5/12/2019
  *
  *************************************************************/
 
@@ -30,9 +30,11 @@ func main() {
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	})
 	r.Use(cors.Handler)
+	// Static file server
 	FileServer(r, "/client", http.Dir("/home/pi/web"))
+	FileServer(r, "/favicon.ico", http.Dir("/home/pi/web"))
+	// Map db calls
 	r.Get("/getUptime", func(w http.ResponseWriter, r *http.Request) {
-		//log.Println("getAlerts()")
 		w.Write([]byte(dbapi.GetUptime()))
 	})
 	r.Get("/getAlerts", func(w http.ResponseWriter, r *http.Request) {
@@ -44,9 +46,10 @@ func main() {
 		//log.Println("getInfos()", val)
 		w.Write([]byte(dbapi.GetInfos(val)))
 	})
-	r.Get("/getAllInfos", func(w http.ResponseWriter, r *http.Request) {
-		//log.Println("getAllInfos()")
-		w.Write([]byte(dbapi.GetAllInfos()))
+	r.Get("/getAllInfos/{earliest}", func(w http.ResponseWriter, r *http.Request) {
+		val := chi.URLParam(r, "earliest")
+		//log.Println("getAllInfos()", val)
+		w.Write([]byte(dbapi.GetAllInfos(val)))
 	})
 	r.Get("/getInfo/{info}", func(w http.ResponseWriter, r *http.Request) {
 		val := chi.URLParam(r, "info")
@@ -85,23 +88,21 @@ func main() {
 		val := chi.URLParam(r, "alert")
 		w.Write([]byte(dbapi.GetCAP(val)))
 	})
+	// and start
 	http.ListenAndServe(":9111", r)
 }
 
-// FileServer ...
+// FileServer ... serves a static file
 func FileServer(r chi.Router, path string, root http.FileSystem) {
 	if strings.ContainsAny(path, "{}*") {
 		panic("FileServer does not permit URL parameters.")
 	}
-
 	fs := http.StripPrefix(path, http.FileServer(root))
-
 	if path != "/" && path[len(path)-1] != '/' {
 		r.Get(path, http.RedirectHandler(path+"/", 301).ServeHTTP)
 		path += "/"
 	}
 	path += "*"
-
 	r.Get(path, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fs.ServeHTTP(w, r)
 	}))
