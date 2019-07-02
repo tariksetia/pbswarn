@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 2.2 3/8/2019
+ *  Version 2.4 7/2/2019
  *
  *************************************************************/
 
@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+
 	//"fmt"
 	"hash"
 	"io/ioutil"
@@ -26,6 +27,8 @@ import (
 )
 
 const postURL = "https://94e38d27ol.execute-api.us-west-2.amazonaws.com/dev"
+//const postURL2 = "https://qkbfin9m14.execute-api.us-east-1.amazonaws.com/Prod"
+const postURL2 = "https://lap2cf4tog.execute-api.us-east-1.amazonaws.com/prod"
 
 var (
 	inMessage bool
@@ -142,6 +145,8 @@ func removeAll(source []byte, remove []byte) []byte {
 }
 
 func postXML(message string) {
+
+	// send XML to original AWS server
 	req, _ := http.NewRequest("POST", postURL, bytes.NewBuffer([]byte(message)))
 	req.Header.Set("Content-Type", "application/xml")
 	client := &http.Client{}
@@ -150,15 +155,35 @@ func postXML(message string) {
 		log.Println("postXML Error", err)
 	}
 	defer resp.Body.Close()
+
+	// send to new PBS server
+	req2, _ := http.NewRequest("POST", postURL2, bytes.NewBuffer([]byte(message)))
+	req.Header.Set("Content-Type", "application/xml")
+	client2 := &http.Client{}
+	resp2, err := client2.Do(req2)
+	if err != nil {
+		log.Println("postXML Error", err)
+	}
+	defer resp2.Body.Close()
+
+	// log response from old server
 	body, _ := ioutil.ReadAll(resp.Body)
 	var m map[string]interface{}
 	err = json.Unmarshal(body, &m)
 	if err != nil {
-		log.Println(resp.StatusCode, "-", string(body))
-		// if error, pause and retry
-
+		log.Println("old", resp.StatusCode, "-", string(body))
 	} else {
-		log.Println(resp.StatusCode, "-", m["body"])
+		log.Println("old", resp.StatusCode, "-", m["body"])
+	}
+
+	// log response from PBS (new) server
+	body, _ = ioutil.ReadAll(resp2.Body)
+	var n map[string]interface{}
+	err = json.Unmarshal(body, &n)
+	if err != nil {
+		log.Println("new", resp2.StatusCode, "-", string(body))
+	} else {
+		log.Println("new", resp2.StatusCode, "-", n["body"])
 	}
 	return
 }
