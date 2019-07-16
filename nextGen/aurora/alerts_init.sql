@@ -6,7 +6,8 @@ CREATE TABLE `alerts` (
   `expires` datetime DEFAULT NULL,
   `replacedBy` varchar(100) DEFAULT NULL,
   `identifier` varchar(100) DEFAULT NULL,
+  `uid` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=428 DEFAULT CHARSET=utf8mb4;
-CREATE INDEX alerts_identifier_IDX USING BTREE ON warn.alerts (identifier);
+CREATE INDEX alerts_identifier_IDX USING BTREE ON warn.alerts (uid);
 CREATE INDEX alerts_expires_IDX USING BTREE ON warn.alerts (expires);

@@ -42,7 +42,7 @@ const initMap = () => {
     var centerLat, centerLon, defaultZoom
     map = L.map('map', zoomDelta = 0.1).setView([39.833, -98.583], 4.2)
     // add the base map from OSM tile server
-    L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {
         attribution: 'Map &copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors | Wireless Emergency Alerts from PBS WARN @ KVIE, Sacramento\n'
     }).addTo(map);
     markerGroup = L.layerGroup().addTo(map)
