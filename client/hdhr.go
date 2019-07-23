@@ -197,13 +197,10 @@ func setup() {
 
 // Get preferred outbound ip of this machine
 func getOutboundIP() net.IP {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer conn.Close()
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	return localAddr.IP
+	myIP := execCmd("/sbin/ifconfig", "eth0")
+	myIP = strings.TrimSpace(strings.Split(myIP, "\n")[1])
+	myIP = strings.Split(myIP, " ")[1]
+	return net.ParseIP(myIP)
 }
 
 // execute a system-level command
