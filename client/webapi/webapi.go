@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 1.1 5/15/2019
+ *  Version 1.2 7/22/2019
  *
  *************************************************************/
 
@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"../dbapi"
+	"../hdapi"
 	_ "github.com/davecgh/go-spew/spew"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
@@ -88,7 +89,19 @@ func main() {
 		val := chi.URLParam(r, "alert")
 		w.Write([]byte(dbapi.GetCAP(val)))
 	})
-	// and start
+
+	// calls to control the HDHomeRun receiver
+	// tune to frequency
+	r.Get("/tuneRX/{freq}", func(w http.ResponseWriter, r *http.Request) {
+		freq := chi.URLParam(r, "freq")
+		w.Write([]byte(hdapi.TuneRX(freq)))
+	})
+	// poll for status
+	r.Get("/trackRX", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(hdapi.TrackRX()))
+	})
+
+	// and start the server
 	http.ListenAndServe(":9111", r)
 }
 
