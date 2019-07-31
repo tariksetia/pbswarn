@@ -102,6 +102,13 @@ table {
     overflow: hidden;
 }
 
+#filterText {
+    background-color: antiquewhite;
+    font-weight:700;
+    opacity:0.6;
+    color: black;
+}
+
 #tuner {
     position:fixed;
     right:20px;
@@ -111,6 +118,7 @@ table {
     color: rgb(241, 240, 219);
     font-size:xx-small;
     z-index: 1500;
+    opacity: 0.6;
 }
 
 #tunerTable {
