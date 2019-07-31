@@ -45,12 +45,14 @@ async function updateList() {
         }
         // skip if category is rejected
         if (categoryBlocked(it)) continue
+        // and apply the text filter if any
+        if ($("#filterText").text != "") {
+            if (! hasText(it)) continue
+        }
         // if not filtered out, add item div 
         listString = listString+(itemToDiv(it))
         //masterDiv.append(itemToDiv(it))
     }
-    //console.log(listString)
-    //listString =  ""
     masterDiv.empty()
     masterDiv.html(listString)
 }
@@ -178,6 +180,13 @@ function isExpired(item) {
     }
 }
 
+function hasText(item) {
+    var text = $("#filterText").val()
+    var content = item.SenderName + " " + item.Slug
+    if (content.search(text) > -1) return true
+    return false
+}
+
 function categoryBlocked(item) {
     var stops = getStopCategories()
     var cat = item.Category
@@ -215,6 +224,13 @@ $("#ExpiredCB").on('change', function () {
 $(".filter").on('change', function (e) {
     updateList()
     e.target.blur()
+})
+
+// Click on the filter text "clear" button
+$("#clearFilter").on('click', function () {
+    $("#filterText").val("")
+    updateList()
+    $("#clearFilter").blur()
 })
 
 // Click on the X in the Info Viewer
