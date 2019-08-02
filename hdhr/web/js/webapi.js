@@ -1,4 +1,4 @@
-// 5/12/2019
+// 7/31/2019
 
 // Retrieve the Uptime timestamp from server
 async function getUptime() {
@@ -10,7 +10,6 @@ async function getUptime() {
 
 // Retrieve the items for the past n days
 async function getItems(days) {
-    //console.log("getAlerts")
     const result = await $.ajax({
         url: "/getItems/"+days
     })
