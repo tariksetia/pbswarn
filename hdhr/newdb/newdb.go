@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Updated 7/28/2019
+ *  Updated 8/1/2019
  *
  *************************************************************/
 
@@ -113,8 +113,12 @@ func PutAlert(alert cap.Alert) {
 	defer stmnt.Close()
 	capText := cap.FormatCAP(alert)
 	if _, err := stmnt.Exec(uuid, alert.Sent, capText); err != nil {
-		//log.Println("(newdb.PutAlert stmnt.Exec)", err)
-		log.Println("DUPLICATE", uuid)
+		
+		if (strings.Contains(err.Error(), "Error 1062")) {
+			log.Println("DUPLICATE", uuid)
+		} else {
+			log.Println("(newdb.PutAlert stmnt.Exec)", err)
+		}
 		return
 	}
 	log.Println("ADDING", uuid)
