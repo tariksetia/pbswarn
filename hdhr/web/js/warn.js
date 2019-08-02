@@ -1,4 +1,4 @@
-// 7/28/2019
+// 8/1/2019
 
 var masterDiv
 var masterSlider
@@ -10,8 +10,7 @@ $(document).ready(function () {
     if ('scrollRestoration' in history) {
         // Back off, browser, I got this...
         history.scrollRestoration = 'manual';
-      }
-
+    }
     masterDiv = $("#masterDiv")
     masterSlider = $("#masterSlider")
     // when the display regains focus, update immediately
@@ -36,6 +35,8 @@ $(document).ready(function () {
 async function updateList() {
     var listString = ""
     items = await getItems(5) // webapi.js/getItems
+    // sort the items by sent time
+    items.sort(sortFunction)
     // for each item
     for (let i=0; i<items.length; i++) {
         it = JSON.parse(items[i])
@@ -286,3 +287,12 @@ const textWrap = (text, maxLineLength) => {
     }
     return output
   }
+
+
+function sortFunction(a,b){  
+    var dateA = new Date(JSON.parse(a).Sent).getTime()
+    var dateB = new Date(JSON.parse(b).Sent).getTime()
+    return dateA < dateB ? 1 : -1;  
+}; 
+
+ 
