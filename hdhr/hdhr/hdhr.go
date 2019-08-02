@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Updated 7/31/2019
+ *  Updated 8/1/2019
  *
  *************************************************************/
 
@@ -79,7 +79,7 @@ func reader(packets chan []byte) {
 	pc, err := net.ListenPacket("udp", getOutboundIP().String()+":"+strconv.Itoa(cfg.UDPPort))
 	fmt.Println("(hdhr.reader) Listening to UDP on port", strconv.Itoa(cfg.UDPPort))
 	if err != nil {
-		log.Fatal(err)
+		log.Println("(hdhr.reader)", err)
 	}
 	defer pc.Close()
 	for {
