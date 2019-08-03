@@ -1,9 +1,14 @@
-// 8/1/2019
+// 8/3/2019
 
 var masterDiv
 var masterSlider
 var updateTimer
 var clockTimer
+
+//check for support
+if (!('indexedDB' in window)) {
+    console.log('This browser doesn\'t support IndexedDB');
+  }
 
 // when everything is loaded, set up the display
 $(document).ready(function () {
@@ -109,8 +114,13 @@ function itemToDiv(item) {
         "<td class='urgency " + item.Urgency + "'>" + item.Urgency + "</td>" +
         "<td class='severity " + item.Severity + "'>" + item.Severity + "</td>" +
         "<td class='certainty " + item.Certainty + "'>" + item.Certainty + "</td>" +
-        "<td class='slug'><a href='javascript:showDisplay(\"" + item.UUID + "\")'>" + item.Slug + "</a></td>" +
-        "<td class='senderName'>" + item.SenderName + "</td>" +
+        "<td class='slug'><a href='javascript:showDisplay(\"" + item.UUID + "\")'>" 
+    if (isNew(item)) {
+        newDivHTML = newDivHTML + "<span class='blinking'>" + item.Slug + "</span>" + "</a></td>"
+    } else {
+        newDivHTML = newDivHTML + "<span>" + item.Slug + "</span>" + "</a></td>"
+    }
+    newDivHTML = newDivHTML +"<td class='senderName'>" + item.SenderName + "</td>" +
         "</tr></table></div>"
     return newDivHTML
 }
@@ -125,6 +135,7 @@ async function displayToHTML(display) {
     <td class='certainty ${display.Certainty}'>${display.Certainty}</td>
     </tr></table>`
     infoTab = infoTab + `</td></tr>`
+    var slug = display.Headline
     if (display.Headline !="") {
         infoTab = infoTab + `<tr><td class='label'>HEADLINE</td><td>${display.Headline}</td></tr>`
     }
@@ -163,12 +174,16 @@ async function displayToHTML(display) {
     return infoTab
 }
 
-
 /************************
     Item filters
 ************************/
 
 function isNew(item) {
+    sentTime = DateTime.fromISO(item.Sent)
+    threshold = DateTime.local().minus({minutes:1})
+    if (sentTime > threshold) {
+        return true
+    }
     return false
 }
 
@@ -294,5 +309,3 @@ function sortFunction(a,b){
     var dateB = new Date(JSON.parse(b).Sent).getTime()
     return dateA < dateB ? 1 : -1;  
 }; 
-
- 
