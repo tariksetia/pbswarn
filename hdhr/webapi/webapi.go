@@ -66,7 +66,7 @@ func Start() {
 	r.Use(cors.Handler)
 
 	// Static file server
-	FileServer(r, "/", http.Dir("/home/pi/hdhr_dev/web"))
+	FileServer(r, "/", http.Dir("./web"))
 
 	// Map db calls
 	r.Get("/getUptime", func(w http.ResponseWriter, r *http.Request) {
