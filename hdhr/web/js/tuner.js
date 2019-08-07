@@ -1,4 +1,4 @@
-// 7/27/2019
+// 8/6/2019
 
 var ch = document.getElementById("ch")
 var freq = document.getElementById("freq")
@@ -8,6 +8,7 @@ var sig = document.getElementById("sig")
 ch.onchange = function(){
     var setFreq = ch.options[ch.selectedIndex].value    
     tuneRX(setFreq)
+    persist.setItem("freq", setFreq )
     ch.blur()
 }
 
