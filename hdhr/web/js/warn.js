@@ -1,20 +1,55 @@
-// 8/3/2019
+// 8/6/2019
 
 var masterDiv
 var masterSlider
 var updateTimer
 var clockTimer
-
-//check for support
-if (!('indexedDB' in window)) {
-    console.log('This browser doesn\'t support IndexedDB');
-  }
+var persist
 
 // when everything is loaded, set up the display
 $(document).ready(function () {
-    if ('scrollRestoration' in history) {
-        // Back off, browser, I got this...
-        history.scrollRestoration = 'manual';
+    // initialize controls per the localStorage
+    persist = window.localStorage
+    // expired
+    if (persist.getItem('expired') != null) {
+        var expired = persist.getItem('expired')
+        if (expired == 'false') {
+            $("#ExpiredCB").prop("checked", false) 
+        } else {
+            $("#ExpiredCB").prop("checked", true) 
+        }
+    }
+    // freq
+    if (persist.getItem('freq') != null) {
+        tuneRX(persist.getItem('freq'))
+    }
+    // time zone
+    if (persist.getItem('timeZone') != null) {
+        $("#timeZone").val(persist.getItem('timeZone'))
+    }
+    // [category filter flags]
+    if (persist.getItem('categories') != null) {
+        var categories = persist.getItem('categories')
+        // conform filter CBs to categories-block list
+        var boxes = $(".filter")
+        var len = boxes.length
+        // for each checkbox, if NOT checked add label to cats
+        for (var i=0; i<boxes.length; i++) {
+            var box = $(boxes[i])
+            // get category value for this checkbox
+            var val = box[0]['name']
+            // if that category appears in stop list, uncheck box
+            if (categories.indexOf(val) > -1) {
+                box.prop('checked', false)
+            }
+        }
+
+
+    }
+    // [filterText]
+    if (persist.getItem('filterText') != "") {
+
+        $("#filterText").val(persist.getItem('filterText'))
     }
     masterDiv = $("#masterDiv")
     masterSlider = $("#masterSlider")
@@ -52,7 +87,7 @@ async function updateList() {
         // skip if category is rejected
         if (categoryBlocked(it)) continue
         // and apply the text filter if any
-        if ($("#filterText").text != "") {
+        if ($("#filterText").val() != "") {
             if (! hasText(it)) continue
         }
         // if not filtered out, add item div 
@@ -233,20 +268,28 @@ function getStopCategories() {
 // Click on the Expired filter checkbox triggers screen refresh
 $("#ExpiredCB").on('change', function () {
     updateList()
+    persist.setItem("expired", $("#ExpiredCB").prop('checked'))
     $("#ExpiredCB").blur()
 })
   
 // Click on one of the filter category checkboxes
 $(".filter").on('change', function (e) {
     updateList()
+    persist.setItem("categories", getStopCategories())
     e.target.blur()
 })
 
 // Click on the filter text "clear" button
 $("#clearFilter").on('click', function () {
     $("#filterText").val("")
+    persist.setItem("filterText", $("#filterText").val() )
     updateList()
     $("#clearFilter").blur()
+})
+
+// type into filter text
+$("#filterText").on('input', function () {
+    persist.setItem("filterText", $("#filterText").val() )
 })
 
 // Click on the X in the Info Viewer
