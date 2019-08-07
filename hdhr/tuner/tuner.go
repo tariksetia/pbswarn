@@ -85,7 +85,6 @@ func TuneRX(device string, tuner string, freq string) {
 		log.Println("(tuner.init config.GetConf)", err.Error())
 	}
 	SetPIDFilter(device, tuner, cfg.PID)
-	fmt.Println("(tuner.TuneRX) set target", device, "tuner", tuner, "IP", getOutboundIP().String(), "port", strconv.Itoa(cfg.UDPPort))
 	TargetRX(device, tuner, getOutboundIP().String(), strconv.Itoa(cfg.UDPPort))
 }
 
