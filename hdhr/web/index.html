@@ -1,153 +1,48 @@
-<!DOCTYPE html>
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  
-  <title>PBS WARN Datacast</title>
-  <meta name="description" content="">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="css/main.css">
-</head>
-<body>
-  <div id="logo"><img src="img/pbs_logo_black_button_white_text.png">&nbsp;WARN Datacast</div>
+// 8/6/2019
 
-  <div id="masterDiv"></div>
+var ch = document.getElementById("ch")
+var freq = document.getElementById("freq")
+var sig = document.getElementById("sig")
 
-  <div id="infoViewer" style="display: none;">
-     <div id="infoDisplay"></div>
-  </div>
+// onchange in ch selector, web call to tuneRx() on server (response is trackRx() output)... and reset tune
+ch.onchange = function(){
+    var setFreq = ch.options[ch.selectedIndex].value    
+    tuneRX(setFreq)
+    persist.setItem("freq", setFreq )
+    ch.blur()
+}
 
-  <div id="rawViewer" style="display: none;">
-    <div id="rawDisplay"></div>
-  </div>
+// function to call tuneRX() on service
+async function tuneRX(freq) {
+    const result = await $.ajax({
+        url: "/tuneRX/"+freq
+    }).then(RXstatus)
+}
 
-  <div id="clock">Setting</div><br>
-  <div id="uptimer">Not yet updated&nbsp;</div>
+async function RXstatus(data) {
+    const status = await $.ajax({
+        url: "/RXstatus"
+    })
+    dataArray = status.split(" ")
+    frq = dataArray[0].split(":")[1].replace("000000", "")
+    ss = dataArray[2].split("=")[1]
+    freq.value = " " + frq
+    sig.value = " " + ss
+}
 
-  <div id="reload" style="position:absolute;bottom:10px;left:30px;color:black;background-color:white;opacity:0.2;cursor:pointer;" class="button">reload</div>
- 
-  <div id="filterDiv" data-children-count="13">
-    View:<br> <br>
-    <input type="checkbox" name="Geo" checked="" class="styled filter">Geo <br>
-    <input type="checkbox" name="Met" checked="" class="styled filter">Met <br>
-    <input type="checkbox" name="Safety" checked="" class="styled filter">Safety <br>
-    <input type="checkbox" name="Security" checked="" class="styled filter">Security <br>
-    <input type="checkbox" name="Rescue" checked="" class="styled filter">Rescue <br>
-    <input type="checkbox" name="Fire" checked="" class="styled filter">Fire <br>
-    <input type="checkbox" name="Health" checked="" class="styled filter">Health <br>
-    <input type="checkbox" name="Env" checked="" class="styled filter">Env <br>
-    <input type="checkbox" name="Transport" checked="" class="styled filter">Transport <br>
-    <input type="checkbox" name="Infra" checked="" class="styled filter">Infra <br>
-    <input type="checkbox" name="CBRNE" checked="" class="styled filter">CBRNE <br>
-    <input type="checkbox" name="Other" checked="" class="styled filter">Other <br>
-    <br>
-    <input type="checkbox" name="ExpiredCB" id="ExpiredCB" checked="">Expired
-    <br><br><br><br><br><br>
-    <input type="text" id="filterText" placeholder="Filter Text" value="" size="16">
-    <input type="button" class="button" id="clearFilter" style="margin-top:4px;" value="Clear Filter">
-    </tr>
-    <br>
-    </tr></table>
-  </div>
+$( document ).ready(async function() {
+    refreshRX()
+    clockTimer = setInterval(refreshRX, 3000)
+})
 
-  <div id="displayZone">
-    Display Time Zone:&nbsp;
-    <select id="timeZone">
-        <option value="Etc/GMT">GMT</option>
-        <option value="America/Port_of_Spain">Atlantic</option>
-        <option value="America/New_York">Eastern</option>
-        <option value="America/Chicago">Central</option>
-        <option value="America/Denver">Mountain</option>
-        <option value="America/Los_Angeles">Pacific</option>
-        <option value="America/Anchorage">Alaska</option>
-        <option value="Pacific/Honolulu">Hawaii</option>
-        <option value="Pacific/Pago_Pago">Samoa</option>
-        <option value="Pacific/Guam">Guam</option>
-    </select>
-  </div>
-
-  <div id="tuner">
-    
-    <div id="chLabel">RF Channel</div>
-    <div id="frLabel">MHz.</div>
-    <div id="ssLabel">Signal</div>
-
-    <select id="ch">
-        <option value="57">2</option>
-        <option value="63">3</option>
-        <option value="69">4</option>
-        <option value="79">5</option>
-        <option value="85">6</option>
-        <option value="177">7</option>
-        <option value="183">8</option>
-        <option value="189">9</option>
-        <option value="195">10</option>
-        <option value="201">11</option>
-        <option value="207">12</option>
-        <option value="213">13</option>
-        <option value="473">14</option>
-        <option value="479">15</option>
-        <option value="485">16</option>
-        <option value="491">17</option>
-        <option value="497">18</option>
-        <option value="503">19</option>
-        <option value="509">20</option>
-        <option value="515">21</option>
-        <option value="521">22</option>
-        <option value="527">23</option>
-        <option value="533">24</option>
-        <option value="539">25</option>
-        <option value="545">26</option>
-        <option value="551">27</option>
-        <option value="557">28</option>
-        <option value="563">29</option>
-        <option value="569">30</option>
-        <option value="575">31</option>
-        <option value="581">32</option>
-        <option value="587">33</option>
-        <option value="593">34</option>
-        <option value="599">35</option>
-        <option value="605">36</option>
-        <option value="611">37</option>
-        <option value="617">38</option>
-        <option value="623">39</option>
-        <option value="629">40</option>
-        <option value="635">41</option>
-        <option value="641">42</option>
-        <option value="647">43</option>
-        <option value="653">44</option>
-        <option value="659">45</option>
-        <option value="665">46</option>
-        <option value="671">47</option>
-        <option value="677">48</option>
-        <option value="683">49</option>
-        <option value="689">50</option>
-        <option value="695">51</option>
-        <option value="701">52</option>
-        <option value="707">53</option>
-        <option value="719">55</option>
-        <option value="725">56</option>
-        <option value="731">57</option>
-        <option value="737">58</option>
-        <option value="761">62</option>
-        <option value="767">63</option>
-        <option value="773">64</option>
-        <option value="791">67</option>
-        <option value="797">68</option>
-        <option value="803">69</option>
-    </select>
-          
-    <div id="freq" class="display" ></div>
-        
-    <div id="sig" class="display" ></div>
-
-      
-  </div>
-      
-<script src="js/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
-<script src="js/luxon.min.js"></script>
-<script src="js/vkbeautify.js"></script>
-<script src="js/clock.js"></script>
-<script src="js/warn.js"></script>
-<script src="js/webapi.js"></script>
-<script src="js/tuner.js"></script>
- 
-</body></html>
+async function refreshRX() {
+    var data = await $.ajax({
+        url: "/RXstatus"
+    })
+    dataArray = data.split(" ")
+    frq = dataArray[0].split(":")[1].replace("000000", "")
+    ss = dataArray[2].split("=")[1]
+    ch.value = frq
+    $("#freq").html("&nbsp;&nbsp;&nbsp;" + frq)
+    $("#sig").html("&nbsp;&nbsp;" + ss) 
+}
