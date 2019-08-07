@@ -1,4 +1,4 @@
-// 7/27/2019
+// 8/6/2019
 
 var DateTime = luxon.DateTime
 var displayZone
@@ -12,6 +12,7 @@ timeZone.value = tz
 
 // after changing the timezone setting, deselect the selector
 timeZone.onchange = function(){
+  persist.setItem('timeZone', timeZone.options[timeZone.selectedIndex].value)
   timeZone.blur()
 }
 
@@ -26,7 +27,6 @@ async function showUptime() {
   var uptimeStr = await getUptime()
   uptimeStr = uptimeStr.replace(" ", "T")
   var uptime = DateTime.fromISO(uptimeStr)
-
   displayZone = timeZone.options[timeZone.selectedIndex].value  
   var up = toDisplayZone(uptime).toFormat("HH:mm:ss LL/dd/yyyy ZZZZ")
   $("#uptimer").html("Last " + up + "&nbsp;")
