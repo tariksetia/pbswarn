@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Updated 8/3/2019
+ *  Updated 8/6/2019
  *
  *************************************************************/
 
@@ -50,6 +50,7 @@ var deviceID string
 var alerts chan cap.Alert
 var buf []byte
 var posn int
+var packets chan []byte  // scoped to permit a reader restart
 
 func Start() {
 	// load system configuration
@@ -60,7 +61,7 @@ func Start() {
 	// trim database
 	newdb.TrimDB(10)
 	// set up UDP client
-	packets := make(chan []byte, 20)
+	packets = make(chan []byte, 20)
 	go reader(packets)
 	// set up print spooler
 	alerts = make(chan cap.Alert, 5)
@@ -138,21 +139,23 @@ func assemble(msg []byte) {
 	}
 	// if we're in a message, append this new fragment
 	if inMessage {
-		//fmt.Println("\n",strconv.Itoa(posn)+"->", string(msg) )
+		var en int
 		message = append(message, msg...)
 		posn = posn + 1
-	}
-	// repair and trim at the end of CMAC, record uptime
-	en := bytes.Index(message, []byte("</CMAC_Alert_"))
-	if en != -1 {
-		message = message[:en]                                           // trim off trailing garbage
-		message = append(message, []byte("</CMAC_Alert_Attributes>")...) // repair the closing tag
-		inMessage = false
-		newdb.PutUptime()
-		fmt.Println("cmam", newdb.GetUptime())
+		// repair and trim at the end of CMAC, record uptime
+		en = bytes.Index(message, []byte("</CMAC_Alert_"))
+		if en != -1 {
+			//fmt.Println("(assemble)", string(msg))
+			message = message[:en]                                           // trim off trailing garbage
+			message = append(message, []byte("</CMAC_Alert_Attributes>")...) // repair the closing tag
+			inMessage = false
+			newdb.PutUptime()
+			fmt.Println("cmam", newdb.GetUptime())
+			return
+		}
 	}
 	// repair and trim at the end of CAP Alert, record uptime
-	en = bytes.Index(message, []byte("</ale"))
+	en := bytes.Index(message, []byte("</ale"))
 	if en != -1 {
 		message = message[:en]                           // trim off trailing garbage
 		message = append(message, []byte("</alert>")...) // repair the closing tag
