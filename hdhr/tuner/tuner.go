@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Updated 8/1/2019
+ *  Updated 8/6/2019
  *
  *************************************************************/
 
@@ -51,7 +51,7 @@ func Start() {
 	// discover HDHomeRun receiver on ethernet
 	hdhr := strings.Split(Discover(), " ")
 	deviceID = hdhr[2]
-	deviceIP := hdhr[5]
+	deviceIP = hdhr[5]
 	fmt.Print("(tuner.init) Found receiver ", deviceID, " at ", deviceIP)
 	// load system configuration
 	cfg = Configuration{}
@@ -77,7 +77,16 @@ func Discover() string {
 }
 
 func TuneRX(device string, tuner string, freq string) {
+	fmt.Println("(tuner.TuneRX) set device", device, "tuner", tuner, "to", freq)
 	execCmd("/usr/local/bin/hdhomerun_config", device, "set", "/tuner"+tuner+"/channel", "8vsb:"+freq+"000000")
+	// load system configuration
+	cfg = Configuration{}
+	if err := config.GetConf("warnmonitor.conf", &cfg); err != nil {
+		log.Println("(tuner.init config.GetConf)", err.Error())
+	}
+	SetPIDFilter(device, tuner, cfg.PID)
+	fmt.Println("(tuner.TuneRX) set target", device, "tuner", tuner, "IP", getOutboundIP().String(), "port", strconv.Itoa(cfg.UDPPort))
+	TargetRX(device, tuner, getOutboundIP().String(), strconv.Itoa(cfg.UDPPort))
 }
 
 func RXstatus(device string, tuner string) string {
@@ -99,7 +108,7 @@ func execCmd(cmdStr string, args ...string) string {
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		log.Fatal(err)
+		log.Println("(execCmd)", err)
 	}
 	return out.String()
 }
