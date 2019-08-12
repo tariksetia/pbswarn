@@ -124,10 +124,12 @@ func PutAlert(alert cap.Alert) {
 	// cancel
 	if (alert.MessageType == "Cancel") {
 		replace(alert.References, uuid)
+		log.Println("Cancelling", alert.References, "per", uuid)
 	}
 	// update
 	if (alert.MessageType == "Update") {
 		replace(alert.References, uuid)
+		log.Println("Updating", alert.References, "per", uuid)
 	}
 	// add alert to DB
 	log.Println("ADDING", uuid)
