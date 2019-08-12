@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Updated 8/1/2019
+ *  Updated 8/12/2019
  *
  *************************************************************/
 
@@ -121,9 +121,19 @@ func PutAlert(alert cap.Alert) {
 		}
 		return
 	}
+	// cancel
+	if (alert.MessageType == "Cancel") {
+		replace(alert.References, uuid)
+	}
+	// update
+	if (alert.MessageType == "Update") {
+		replace(alert.References, uuid)
+	}
+	// add alert to DB
 	log.Println("ADDING", uuid)
 	// for each Info make item and display jsons
 	for _, info := range alert.Infos {
+		// list item entry
 		it := Item{}
 		it.UUID = uuid
 		it.Identifier = alert.Identifier
@@ -140,6 +150,9 @@ func PutAlert(alert cap.Alert) {
 		if it.Slug == "" {
 			it.Slug = getCMAMText(info)
 		}
+		if (alert.MessageType == "Cancel") {
+			it.Slug = "Cancel " + alert.References
+		}
 		it.SenderName = info.SenderName
 		it.Expires = info.Expires
 		jsn, _ := json.Marshal(it)
@@ -148,7 +161,7 @@ func PutAlert(alert cap.Alert) {
 		if _, err := stmnt.Exec(jsn, alert.Sent, uuid); err != nil {
 			log.Println("(newdb.init stmnt.Exec())", err)
 		}
-		// make json and store it in display
+		// display entry
 		disp := Display{}
 		disp.UUID = uuid
 		disp.Sent = alert.Sent
@@ -179,9 +192,24 @@ func PutAlert(alert cap.Alert) {
 	}
 }
 
+// mark updated or cancelled items in items and cap tables
+func replace(targetUID string, alertUID string) {
+	stmnt := prepStmt("update items set replacedBy = ? where uuid = ?")
+	defer stmnt.Close()
+	if _, err := stmnt.Exec(alertUID, targetUID); err != nil {
+		log.Println("(newdb.replace stmnt.Exec #1)", err)
+	}
+	stmnt = prepStmt("update cap set replacedBy = ? where uuid = ?")
+	defer stmnt.Close()
+	if _, err := stmnt.Exec(alertUID, targetUID); err != nil {
+		log.Println("(newdb.replace stmnt.Exec #2)", err)
+	}
+}
+
+
 // GetItems returns a JSON object containing all items for given number of days past, sorted most recent first
 func GetItems(days int) string {
-	stmnt := prepStmt("select json from items where sent > subdate(now(), ?) order by sent desc")
+	stmnt := prepStmt("select json from items where sent > subdate(now(), ?) and replacedBy = '' order by sent desc")
 	defer stmnt.Close()
 	//var rows sql.Result
 	rows, err := stmnt.Query(days)
