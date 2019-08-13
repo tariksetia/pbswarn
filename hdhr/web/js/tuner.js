@@ -1,4 +1,4 @@
-// 8/6/2019
+// 8/12/2019
 
 var ch = document.getElementById("ch")
 var freq = document.getElementById("freq")
@@ -39,6 +39,7 @@ async function refreshRX() {
     var data = await $.ajax({
         url: "/RXstatus"
     })
+    //console.log(data)
     dataArray = data.split(" ")
     frq = dataArray[0].split(":")[1].replace("000000", "")
     ss = dataArray[2].split("=")[1]
