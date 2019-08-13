@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Updated 8/12/2019
+ *  Updated 8/13/2019
  *
  *************************************************************/
 
@@ -298,7 +298,7 @@ func TrimDB(days int) {
 func prepStmt(stmt string) *sql.Stmt {
 	sqlStmt, err := db.Prepare(stmt)
 	if err != nil {
-		log.Println("(newdb.prepStmt)", err)
+	fmt.Println("(newdb.prepStmt) ", err)
 	}
 	return sqlStmt
 }
