@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Updated 7/31/2019
+ *  Updated 8/13/2019
  *
  *************************************************************/
 
@@ -39,9 +39,9 @@ func main() {
 	// load system configuration
 	cfg = Configuration{}
 	if err := config.GetConf("warnmonitor.conf", &cfg); err != nil {
-		log.Println("(test.main config.GetConf)", err.Error())
+		fmt.Println("(webapi.main config.GetConf)", err.Error())
 	}
-	fmt.Println("(webapi_launcher.init) Version", cfg.Version)
+	fmt.Println("(webapi.main) Version", cfg.Version)
 
 	//go hdhr.Start()
 	webapi.Start()
