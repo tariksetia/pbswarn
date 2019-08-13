@@ -211,7 +211,7 @@ func replace(targetUID string, alertUID string) {
 
 // GetItems returns a JSON object containing all items for given number of days past, sorted most recent first
 func GetItems(days int) string {
-	stmnt := prepStmt("select json from items where sent > subdate(now(), ?) and replacedBy = '' order by sent desc")
+	stmnt := prepStmt("select json from items where sent > subdate(now(), ?) and replacedBy is null order by sent desc")
 	defer stmnt.Close()
 	//var rows sql.Result
 	rows, err := stmnt.Query(days)
