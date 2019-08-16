@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Updated 8/13/2019
+ *  Updated 8/15/2019
  *
  *************************************************************/
 
@@ -50,6 +50,8 @@ type Item struct {
 	Slug       string
 	SenderName string
 	Expires    string
+	Polygons	[]string
+	Circles		[]string
 }
 
 type Display struct {
@@ -61,6 +63,7 @@ type Display struct {
 	Category	 string
 	Headline     string
 	WEA          string
+	LongWEA		 string
 	Lang         string
 	Response     string
 	Event        string
@@ -152,11 +155,37 @@ func PutAlert(alert cap.Alert) {
 		if it.Slug == "" {
 			it.Slug = getCMAMText(info)
 		}
+		if it.Slug == "" {
+			it.Slug = getCMAMLongText(info)
+		}
 		if (alert.MessageType == "Cancel") {
 			it.Slug = "Cancel " + alert.References
 		}
 		it.SenderName = info.SenderName
 		it.Expires = info.Expires
+		// all polygons and circles for this info
+		for _, area := range info.Areas {
+			if (len(area.Polygons) == 0) {
+				for _, g := range area.Geocodes {
+					if g.ValueName == "SAME" {
+						fmt.Println("(newdb.PutAlert) polygonizing ", g.Value)
+						// look up polygon
+						polys := sameLookup(g.Value)
+						// and add to polygons array
+						for _, p := range polys {
+							it.Polygons = append(it.Polygons, p)
+						}
+					}
+				}	
+			} else {
+				for _, p := range area.Polygons {
+					it.Polygons = append(it.Polygons, p)
+				}
+			}
+			for _, c := range area.Circles {
+				it.Circles = append(it.Circles, c)
+			}
+		}
 		jsn, _ := json.Marshal(it)
 		stmnt = prepStmt("insert into items (json, sent, uuid) values (?,?,?)")
 		defer stmnt.Close()
@@ -172,6 +201,7 @@ func PutAlert(alert cap.Alert) {
 		disp.Certainty = info.Certainty
 		disp.Headline = info.Headline
 		disp.WEA = getCMAMText(info)
+		disp.LongWEA = getCMAMLongText(info)
 		disp.Lang = info.Language
 		disp.Response = info.ResponseType
 		disp.Event = info.Event
@@ -311,4 +341,35 @@ func getCMAMText(info cap.Info) string {
 		}
 	}
 	return ""
+}
+
+// extract the CMAMText from an Info struct
+func getCMAMLongText(info cap.Info) string {
+	for _, param := range info.Parameters {
+		if param.ValueName == "CMAMlongtext" {
+			return param.Value
+		}
+	}
+	return ""
+}
+
+// look up polygons for SAME code
+func sameLookup(fips string) []string{
+	stmnt := prepStmt("select polygon from fips where samecode = ?")
+	defer stmnt.Close()
+	//var rows sql.Result
+	rows, err := stmnt.Query(fips)
+	if err != nil {
+		log.Println("(newdb.sameLookup stmnt.Exec)", err)
+		return nil
+	}
+	defer rows.Close()
+	// assemble items into []string
+	var polygons []string
+	for rows.Next() {
+		var polygon string
+		_ = rows.Scan(&polygon)
+		polygons = append(polygons, polygon)
+	}
+	return polygons
 }
