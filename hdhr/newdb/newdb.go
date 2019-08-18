@@ -4,7 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Updated 8/15/2019
+ *  Updated 8/18/2019
  *
  *************************************************************/
 
@@ -50,8 +50,7 @@ type Item struct {
 	Slug       string
 	SenderName string
 	Expires    string
-	Polygons	[]string
-	Circles		[]string
+	
 }
 
 type Display struct {
@@ -75,6 +74,8 @@ type Display struct {
 	Contact      string
 	Web          string
 	AreaDesc     string
+	Polygons	[]string
+	Circles		[]string
 }
 
 var db *sql.DB
@@ -163,29 +164,6 @@ func PutAlert(alert cap.Alert) {
 		}
 		it.SenderName = info.SenderName
 		it.Expires = info.Expires
-		// all polygons and circles for this info
-		for _, area := range info.Areas {
-			if (len(area.Polygons) == 0) {
-				for _, g := range area.Geocodes {
-					if g.ValueName == "SAME" {
-						fmt.Println("(newdb.PutAlert) polygonizing ", g.Value)
-						// look up polygon
-						polys := sameLookup(g.Value)
-						// and add to polygons array
-						for _, p := range polys {
-							it.Polygons = append(it.Polygons, p)
-						}
-					}
-				}	
-			} else {
-				for _, p := range area.Polygons {
-					it.Polygons = append(it.Polygons, p)
-				}
-			}
-			for _, c := range area.Circles {
-				it.Circles = append(it.Circles, c)
-			}
-		}
 		jsn, _ := json.Marshal(it)
 		stmnt = prepStmt("insert into items (json, sent, uuid) values (?,?,?)")
 		defer stmnt.Close()
@@ -215,6 +193,31 @@ func PutAlert(alert cap.Alert) {
 		disp.Contact = info.Contact
 		disp.Web = info.Web
 		disp.AreaDesc = info.Areas[0].Description
+		// all polygons and circles for this info
+		for _, area := range info.Areas {
+			// if no explicit geometries, do DB lookup on SAME code
+			if (len(area.Polygons) == 0) {
+				for _, g := range area.Geocodes {
+					if g.ValueName == "SAME" {
+						fmt.Println("(newdb.PutAlert) polygonizing ", g.Value)
+						// look up polygon
+						polys := sameLookup(g.Value)
+						// and add to polygons array
+						for _, p := range polys {
+							strings.Replace(p,"\"", "", -1)
+							disp.Polygons = append(disp.Polygons, p)
+						}
+					}
+				}	
+			} else {
+				for _, p := range area.Polygons {
+					disp.Polygons = append(disp.Polygons, p)
+				}
+			}
+			for _, c := range area.Circles {
+				disp.Circles = append(disp.Circles, c)
+			}
+		}
 		jsn, _ = json.Marshal(disp)
 		stmnt = prepStmt("insert into displays (json, sent, uuid) values (?,?,?)")
 		defer stmnt.Close()
@@ -237,7 +240,6 @@ func replace(targetUID string, alertUID string) {
 		log.Println("(newdb.replace stmnt.Exec #2)", err)
 	}
 }
-
 
 // GetItems returns a JSON object containing all items for given number of days past, sorted most recent first
 func GetItems(days int) string {
