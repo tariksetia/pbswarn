@@ -306,12 +306,14 @@ th {
 
 #mapViewer {
     position:relative;
-    min-width:300px;
+    min-width:240px;
+    margin: 10px;
     text-align:center;
     float:right
 }
 
 #mapDisplay {
+    position:relative;
     width:100%; 
     height:280px; 
     margin-top: 5px;
