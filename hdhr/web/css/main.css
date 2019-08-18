@@ -20,10 +20,16 @@ table {
 }
 
 #logo {
-    position: fixed;
+    position: fixed; 
     left: 25px;
     font-size: large;
     font-weight: bold;
+}
+
+#pageName {
+    position:fixed;
+    top:27px;
+    left: 134px;
 }
 
 #clock {
@@ -243,58 +249,6 @@ th {
     vertical-align: top;
 }
 
-.Immediate {
-    color: red
-}
-
-.Expected {
-    color: orange;
-}
-
-.Future {
-    color: yellow;
-}
-
-.Past {
-    color: paleturquoise;
-}
-
-.Unknown {
-    color:gray
-}
-
-.Extreme {
-    color: red
-}
-
-.Severe {
-    color: orange;
-}
-
-.Moderate {
-    color: yellow;
-}
-
-.Minor {
-    color: paleturquoise;
-}
-
-.Observed {
-    color: red
-}
-
-.Likely {
-    color: orange;
-}
-
-.Possible{
-    color: yellow;
-}
-
-.Unlikely {
-    color: paleturquoise;
-}
-
 #infoViewer {
     max-width: 60%;
     min-width: 60%;
@@ -305,11 +259,15 @@ th {
     border-color: rgb(241, 240, 219);
     position: fixed;
     left: 20%;
-    top: 10%;
+    top: 8%;
     padding: 5px;
     padding-bottom: 10px;
     z-index: 100;
     overflow-y: auto;
+}
+
+#infoDisplay {
+
 }
 
 #infoTable {
@@ -344,6 +302,27 @@ th {
     overflow-y: scroll;
     pointer-events: auto;
     word-wrap: break-word;
+}
+
+#mapViewer {
+    position:relative;
+    min-width:300px;
+    text-align:center;
+    float:right
+}
+
+#mapDisplay {
+    width:100%; 
+    height:280px; 
+    margin-top: 5px;
+    background-color: antiquewhite;  
+    cursor:grab;  
+}
+
+#toggleBtn {
+    position:relative;
+    width:67px;
+    margin:0 auto;
 }
 
 #displayZone {
@@ -385,6 +364,7 @@ th {
     background-color:antiquewhite;
     opacity:0.4;
     cursor:pointer
+    display:inline-block
 }
 
 .button a {
@@ -488,7 +468,7 @@ textarea {
 /*
 * Clearfix: contain floats
 *
-* For modern browsers 
+* For modern browsers
 * 1. The space content is one way to avoid an Opera bug when the
 *    `contenteditable` attribute is included anywhere else in the document.
 *    Otherwise it causes space to appear at the top and bottom of elements
