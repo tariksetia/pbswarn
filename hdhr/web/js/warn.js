@@ -5,6 +5,10 @@ var masterSlider
 var updateTimer
 var clockTimer
 var persist
+var polygons = []
+var circles = []
+var map
+var mapLarge = false
 
 // when everything is loaded, set up the display
 $(document).ready(function () {
@@ -43,12 +47,8 @@ $(document).ready(function () {
                 box.prop('checked', false)
             }
         }
-
-
     }
-    // [filterText]
     if (persist.getItem('filterText') != "") {
-
         $("#filterText").val(persist.getItem('filterText'))
     }
     masterDiv = $("#masterDiv")
@@ -92,7 +92,6 @@ async function updateList() {
         }
         // if not filtered out, add item div 
         listString = listString+(itemToDiv(it))
-        //masterDiv.append(itemToDiv(it))
     }
     masterDiv.empty()
     masterDiv.html(listString)
@@ -101,8 +100,28 @@ async function updateList() {
 async function showDisplay(uuid) {
     var display = await getDisplay(uuid)
     disp = await displayToHTML(display)
-    $("#infoViewer").html("<div class='button' style='position:relative;top:10px;left:10px;width:29px;'><a href='javascript:hideDisplay()'>close</a></div>" + disp)
+
+    prefix = `
+    <div class='button' style='position:relative;width:29px;'><a href='javascript:hideDisplay()'>close</div>
+    <div id='mapViewer'>
+        <div class='button' id='toggleBtn'><a href='javascript:mapToggle()'>toggle map</a></div>
+        <div id='mapDisplay'></div>
+    </div>
+     <div id="infoDisplay">`
+    suffix = `
+    <div class='button' style='position:relative;width:29px;'><a href='javascript:hideDisplay()'>close</div>
+   </div>`
+    $("#infoViewer").html(prefix + disp + suffix)
     $("#infoViewer").show() 
+    // if we have an Internet connection, show map, else hide it
+    if (haveInternet()) {
+        $("#mapDisplay").show()
+        //$("#mapDisplay").on('click', mapToggle)
+        plot(display)
+    } else {
+        $("#mapDisplay").hide()
+    }
+    mapMin()
 }
 
 function hideDisplay() {
@@ -123,6 +142,124 @@ async function showRaw(uuid) {
 function hideRaw() {
     $("#rawDisplay").hide() 
 }
+
+/************************
+    Mapping functions
+************************/
+function plot(display) {
+    var polys = display["Polygons"]
+    var circs = display["Circles"]
+
+    map = L.map('mapDisplay')
+
+    map.setView([39.8283, -98.5795],2)
+	L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoiYXJ0Ym90dGVyZWxsIiwiYSI6ImNqa2czNXg4cjBmMjIzcnFuMWhmcnpsMmUifQ.OqRyUVjM3oI0T7JbsUqxaQ', {
+		maxZoom: 18,
+		attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
+			'<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+			'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+        id: 'mapbox.streets'
+    }).addTo(map)
+    // if map unavailable from server, hide the map div
+    L.TileLayer.include({
+        _tileOnError: function (done, tile, e) {
+            mapDisplay.hide()
+            done(e, tile);
+        } 
+    })
+    // convert cap polygons to Leaflet polygons, and add to array
+    polygons = []
+    if (polys.length > 0) {
+        polys.forEach(function(capPoly) {
+            var polygon = capToPolygon(capPoly)
+            polygon.on('click', function() {
+                mapToggle()
+            })
+            polygons.push(polygon)
+        })
+    }
+    // convert cap circles to Leaflet circles, and add to array
+    circles = []
+    if (circs != null && circs.length > 0) {
+        circs.forEach(function(capCircle) {
+            var circle = capToCircle(capCircle)
+            circle.on('click', function() {
+                mapToggle()
+            })
+            circles.push(circle)
+        })
+    }
+    // start accumulating bounds
+    var bnds = null
+    //add each Leaflet polygon to the map
+    polygons.forEach(function(polygon) {
+        polygon.addTo(map)
+        // calculate aggregate bounds for all geometries
+        if (bnds == null) {
+            bnds = polygon.getBounds()
+        } else {
+            bnds.extend(polygon.getBounds())
+        }
+    })
+    //add each Leaflet circle to the map
+    circles.forEach(function(circle) {
+        circle.addTo(map)
+        // calculate aggregate bounds for all geometries
+        if (bnds == null) {
+            bnds = circle.getBounds()
+        } else {
+            bnds.extend(circle.getBounds())
+        }
+    })
+    // now set the map view to buffered aggregate bounds
+    map.fitBounds(bnds.pad(0.9))
+    // and show the map
+    $("#mapViewer").show() 
+}
+
+function capToCircle(capCircle) {
+    var split = capCircle.split(" ")
+    var cSplit = split[0].split(",")
+    var center = L.latLng(cSplit[0], cSplit[1])
+    var rad = split[1] * 1000
+    var circle = L.circle(center, {radius: rad, color: 'red'})
+    return circle
+}
+
+// convert CAP-formatted polygon string into Leaflet polygon
+function capToPolygon(capPoly) {
+    capPoly = capPoly.replace(/\"/g,"")
+    var points = capPoly.split(" ")
+    var poly = ""
+    points.forEach(function(point) {
+        poly = poly + "[" + point + "],"
+    })
+    poly = JSON.parse("[" + poly.substring(0,poly.length-1) + "]")
+    return L.polygon(poly, {color:'red'})
+}
+
+function mapToggle() {
+    if (mapLarge) {
+        mapMin()
+    } else {
+        mapMax()
+    }
+}
+
+function mapMax() {
+    $("#mapViewer").css("width", "100%")
+    $("#mapViewer").css("height", "100%")
+    map.invalidateSize()
+    mapLarge = true
+}
+
+function mapMin() {
+    $("#mapViewer").css("width", "40%")
+    $("#mapViewer").css("height", "100%")
+    map.invalidateSize()
+    mapLarge = false
+}
+
 
 /************************
     Formatters
@@ -160,7 +297,7 @@ function itemToDiv(item) {
     return newDivHTML
 }
 
-// build selected display data into display html
+// build selected display data into display html as a table
 async function displayToHTML(display) {
     var infoTab = "<table id='infoTable'>"
     infoTab = infoTab + `<tr><td></td><td>`
@@ -318,6 +455,12 @@ $("#reload").on('click', function() {
     location.reload()
 })
 
+// Click on the toggle map
+$("#toggleBtn").on('click', function() {
+    console.log("click")
+    mapDisplay.style("width:600px; height:400px")
+})
+
 /************************
     Utilities
 ************************/
@@ -326,10 +469,6 @@ function setLocalTimeZone(name) {
     DateTime.local().setZone(name)
 }
   
-function getLocalTimeZone() {
-    return DateTime.local().zoneName
-}
-
 const textWrap = (text, maxLineLength) => {
     var words = text.replace(/[\r\n]+/g, ' ').split(' ')
     var lineLength = 0
@@ -351,4 +490,8 @@ function sortFunction(a,b){
     var dateA = new Date(JSON.parse(a).Sent).getTime()
     var dateB = new Date(JSON.parse(b).Sent).getTime()
     return dateA < dateB ? 1 : -1;  
-}; 
+}
+
+function haveInternet() {
+    return navigator.onLine
+}
