@@ -1,0 +1,51 @@
+.Immediate {
+    color: red
+}
+
+.Expected {
+    color: orange;
+}
+
+.Future {
+    color: yellow;
+}
+
+.Past {
+    color: paleturquoise;
+}
+
+.Unknown {
+    color:gray
+}
+
+.Extreme {
+    color: red
+}
+
+.Severe {
+    color: orange;
+}
+
+.Moderate {
+    color: yellow;
+}
+
+.Minor {
+    color: paleturquoise;
+}
+
+.Observed {
+    color: red
+}
+
+.Likely {
+    color: orange;
+}
+
+.Possible{
+    color: yellow;
+}
+
+.Unlikely {
+    color: paleturquoise;
+}
