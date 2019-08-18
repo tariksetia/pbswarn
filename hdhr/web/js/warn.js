@@ -1,4 +1,4 @@
-// 8/6/2019
+// 8/8/2019
 
 var masterDiv
 var masterSlider
@@ -247,14 +247,14 @@ function mapToggle() {
 }
 
 function mapMax() {
-    $("#mapViewer").css("width", "100%")
+    $("#mapViewer").css("width", "95%")
     $("#mapViewer").css("height", "100%")
     map.invalidateSize()
     mapLarge = true
 }
 
 function mapMin() {
-    $("#mapViewer").css("width", "40%")
+    $("#mapViewer").css("width", "25%")
     $("#mapViewer").css("height", "100%")
     map.invalidateSize()
     mapLarge = false
