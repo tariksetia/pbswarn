@@ -1,3 +1,5 @@
+/* 8/20/2019 */
+
 html {
     background-color: #1f1103;
     color: rgb(241, 240, 219);
@@ -22,7 +24,7 @@ table {
 #logo {
     position: fixed; 
     left: 25px;
-    font-size: large;
+    font-size: 20px;
     font-weight: bold;
 }
 
@@ -85,7 +87,6 @@ table {
 .alertDiv {
     margin: 10px;
     padding: 2px;
-
 }
 
 .expired {
@@ -153,17 +154,6 @@ table {
     border-width:0px;
 }
 
-/*
-td, th {
-    border: 1px solid #999;
-    padding: 0.5rem;
-  }
-
-th {
-    text-align:center;
-}
-*/
-
 #ch {
     font-size: small;
     background: antiquewhite; 
@@ -217,6 +207,12 @@ th {
 .status {
     width: 200px;
     font-size: x-small;
+}
+
+.cat {
+    width: 60px;
+    font-size: x-small;
+    text-align: left;
 }
 
 .slug {
@@ -316,7 +312,7 @@ th {
     position:relative;
     width:100%; 
     height:280px; 
-    margin-top: 5px;
+    margin-top: 8px;
     background-color: antiquewhite;  
     cursor:grab;  
 }
@@ -324,6 +320,7 @@ th {
 #toggleBtn {
     position:relative;
     width:67px;
+    left:10px;
     margin:0 auto;
 }
 
@@ -363,6 +360,7 @@ th {
     margin: 0 auto;
     color:black;
     border-color:black;
+    border-radius: 4px;
     background-color:antiquewhite;
     opacity:0.4;
     cursor:pointer
