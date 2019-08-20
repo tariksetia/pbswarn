@@ -1,4 +1,4 @@
-// 8/8/2019
+// 8/20/2019
 
 var masterDiv
 var masterSlider
@@ -102,7 +102,7 @@ async function showDisplay(uuid) {
     disp = await displayToHTML(display)
 
     prefix = `
-    <div class='button' style='position:relative;width:29px;'><a href='javascript:hideDisplay()'>close</div>
+    <div class='button' style='position:relative;left:13px;width:29px;'><a href='javascript:hideDisplay()'>close</div>
     <div id='mapViewer'>
         <div class='button' id='toggleBtn'><a href='javascript:mapToggle()'>toggle map</a></div>
         <div id='mapDisplay'></div>
@@ -280,7 +280,7 @@ function itemToDiv(item) {
         "<td class='sent'>" + sent + "</td>" +
         "<td class='identifier'>" + item.Identifier+ "</td>" +
         "<td class='sender'>" + item.Sender + "</td>" +
-        "<td class='status'>" + item.Status + " " + item.Scope + " " + item.MsgType + "</td>" +
+        "<td class='status'>" + item.Status + " " + item.Scope + " " + item.MsgType + "&mdash;" + item.Category + "</td>" +
         "</tr></table>" +
         "<table><tr>" +
         "<td class='urgency " + item.Urgency + "'>" + item.Urgency + "</td>" +
@@ -323,7 +323,7 @@ async function displayToHTML(display) {
     infoTab = infoTab + `
     <tr><td class='label'>EVENT</td><td>${display.Event}</td></tr>
     <tr><td class='label'>SENDER</td><td>${display.SenderName}</td></tr>
-    <tr><td class='label'>CATEGORY</td><td>${display.Categories}</td></tr>
+    <tr><td class='label'>CATEGORY</td><td>${display.Category}</td></tr>
     <tr><td class='label'>EXPIRES</td><td>${display.Expires}</td></tr>`
     if (display.Description != "") {
         infoTab = infoTab + 
