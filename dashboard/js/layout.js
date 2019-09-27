@@ -14,18 +14,12 @@ document.addEventListener(
         var split = window.innerHeight / 2;
         tableDiv.style.top = split;
         wrapper.style.height = split - 40 + "px";
-        var newHeight = split - 100 + "px";
         tableDiv.style.height = window.innerHeight - split + "px";
         tableDiv.style.flexGrow = 1;
         tableDiv.style.height = split - 60 + "px";
     },
     false
 );
-
-// on load complete, initialize map
-document.addEventListener("DOMContentLoaded", function() {
-    initMap();
-});
 
 // Set flags indicating which pulltab was dragged
 document.addEventListener("mousedown", function(e) {
@@ -47,7 +41,7 @@ document.addEventListener("mousemove", function(e) {
     } else if (isVHandlerDragging) {
         var offset = 20;
         var offset = vwrapper.offsetTop;
-        var split = e.clientY - 50; // height of header div
+        var split = e.clientY - 60; // height of header div
         tableDiv.style.top = split;
         wrapper.style.height = split + "px";
         var newHeight = split + "px";
