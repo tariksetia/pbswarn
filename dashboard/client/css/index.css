@@ -1,0 +1,101 @@
+body {
+    margin: 20px;
+    background: #100;
+}
+
+.wrapper {
+    background-color: #100;
+    color: #444;
+    display: flex;
+}
+
+.vwrapper {
+    background-color: #100;
+    color: #444;
+    flex-direction: column;
+    height: 100%;
+    display: flex;
+    flex: 1 1 auto;
+    margin-top: 10px;
+}
+
+.box {
+    background-color: #444;
+    color: #fff;
+    border-radius: 5px;
+    padding: 20px;
+    font-size: 150%;
+    box-sizing: border-box;
+    /* Use box-sizing so that element's outerwidth will match width property */
+    flex: 1 1 auto;
+    /* Allow box to grow and shrink, and ensure they are all equally sized */
+}
+
+#mapDiv {
+    flex: 2 1 auto;
+}
+
+#tableDiv {
+    align-self: flex-end;
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    flex-grow: 1;
+    flex: 2 1 auto;
+}
+
+.handler {
+    width: 10px;
+    padding: 0;
+    cursor: ew-resize;
+    flex: 0 0 auto;
+}
+
+.v-handler {
+    height: 10px;
+    padding: 0;
+    cursor: ns-resize;
+    flex: 0 0 auto;
+}
+
+#header {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    padding-top: 0px;
+    margin: 20px;
+    margin-left: 0;
+    margin-bottom: 10px;
+    background-color: #100;
+    color: #fff;
+    font-family: sans-serif;
+    align-items: center;
+    flex-grow: 0;
+}
+
+#clock {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    width: 190px;
+    height: 50px;
+}
+
+#clockdigits {
+    position: absolute;
+    text-align:center;
+    top: 0px;
+    width: 100%;
+    font-size: 22pt;
+    color: white;
+
+}
+
+#updatedigits {
+    position: absolute;
+    text-align:center;
+    bottom: 0px;
+    width: 100%;
+    color: white;
+    font-size: 8pt;
+}
