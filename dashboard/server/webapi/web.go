@@ -2,34 +2,49 @@ package main
 
 import (
 	"fmt"
+	//"io"
 	"io/ioutil"
+	//"time"
 	"net/http"
-	"strconv"
 	"strings"
+	//"context"
+	//"crypto/tls"
+	//"strconv"
 
 	_ "github.com/davecgh/go-spew/spew"
 	"github.com/go-chi/chi"
-	"github.com/go-chi/cors"
+	"github.com/go-chi/chi/middleware"
+	//"github.com/go-chi/cors"
 	db "pbs.org/warn/dbapi"
+
+	//"golang.org/x/crypto/acme/autocert"
+
 )
 
 func main() {
+
 	r := chi.NewRouter()
-	cors := cors.New(cors.Options{
+
+	// A good base middleware stack
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	//r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
+	/*cors := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		AllowCredentials: true,
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	})
-	r.Use(cors.Handler)
+	r.Use(cors.Handler)*/
 
 	// Static file server
-	FileServer(r, "/", http.Dir("./page"))
+	FileServer(r, "/", http.Dir("./static"))
 
 	// Map db calls
 	r.Post("/addAlert", func(w http.ResponseWriter, r *http.Request) {
-
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			fmt.Println("(web.main) Couldn't read POST")
@@ -51,12 +66,14 @@ func main() {
 		w.Write([]byte(cap))
 	})
 
-	// and start the server
-	fmt.Println("(webapi.init) Starting web interface on port", 9110)
-	http.ListenAndServe(":"+strconv.Itoa(9110), r)
+	r.Get("/test/{val}", func(w http.ResponseWriter, r *http.Request) {
+		val := chi.URLParam(r, "val")
+		fmt.Println ("(web /test)", val)
+		w.Write([]byte("got here with "+val))
+	})
 
-	// keep-alive
-	select {}
+	// and start the server
+	http.ListenAndServe(":9110", r)
 }
 
 // FileServer ... serves a static file system
