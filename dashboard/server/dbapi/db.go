@@ -2,14 +2,32 @@ package dbapi
 
 import (
 	"fmt"
-	"strconv"
 	"time"
-
+	"strconv"
+	"strings"
 	"database/sql"
+	"encoding/json"
 
 	_ "github.com/go-sql-driver/mysql"
 	cap "pbs.org/warn/cap"
 )
+
+type Resource struct {}
+
+type Geocode struct {
+	valueName	string
+	value		string
+}
+
+type EventCode struct {
+	valueName	string
+	value		string
+}
+
+type Parameter struct {
+	valueName	string
+	value		string
+}
 
 type Item struct {
 	uuid         string
@@ -27,7 +45,7 @@ type Item struct {
 	lang         string
 	category     string
 	event        string
-	eventCodes   []cap.EventCode
+	eventCodes   []EventCode
 	urgency      string
 	severity     string
 	certainty    string
@@ -35,18 +53,18 @@ type Item struct {
 	CMAMText     string
 	CMAMLongText string
 	responseType string
-	parameters   []cap.Parameter
+	parameters   []Parameter
 	description  string
 	instruction  string
 	contact      string
 	web          string
 	references   string
-	resources    []cap.Resource
+	resources    []Resource
 	replacedBy   []string
-	areaDescs    []string
+	areaDesc     []string
 	polygons     []string
 	circles      []string
-	geocodes     []cap.Geocode
+	geocodes     []Geocode
 }
 
 var alert cap.Alert
@@ -64,6 +82,11 @@ func init() {
 
 // AddAlert - from a raw CAP alert, stores raw and JSON-formatted version in DB
 func AddAlert(raw string) string {
+
+	// verify as CAP, else send heartbeat
+	if ( strings.Index(raw, "urn:oasis:names:tc:emergency:cap:1.2") < 0) {
+		return "Heartbeat"
+	}
 	// save raw XML to table CAP
 	capResult := AddCAP(raw)
 	var alert cap.Alert
@@ -96,31 +119,56 @@ func AddAlert(raw string) string {
 		it.urgency = info.Urgency
 		it.severity = info.Severity
 		it.certainty = info.Certainty
-		it.eventCodes = info.EventCodes // FLATTEN THIS
-
-		it.expires = info.Expires
+		// Event Codes
+		for _, ecode := range info.EventCodes {
+			i := new(EventCode)
+			i.valueName = ecode.ValueName
+			i.value = ecode.Value
+			it.eventCodes = append(it.eventCodes, *i)
+		}
 		it.senderName = info.SenderName
 		it.headline = info.Headline
 		it.description = info.Description
 		it.instruction = info.Instruction
 		it.web = info.Web
 		it.contact = info.Contact
-		it.parameters = info.Parameters // FLATTEN THIS
-
-		// pull out CMAMText, CMAMLongText from parameters
-		/*
-			it.areas = info.Areas // FLATTEN THIS
-			it.areaDescs
-			it.polygons
-			it.circles
-			it.geocodes
-			it.replacedBy = ""
-		*/
-		// look up geometries from SAME geocodes if none are present
+		// Parameters
+		for _, param := range info.Parameters {
+			p := new(Parameter)
+			p.valueName = param.ValueName
+			p.value = param.Value
+			it.parameters = append(it.parameters, *p)
+		}
+		var geocodes []Geocode
+		var polygons []string
+		var circles []string
+		var areaDescs []string
+		// Areas
+		for _, area := range info.Areas {
+			areaDescs = append(areaDescs, " | " + area.Description)
+			for _, poly := range area.Polygons {
+				polygons = append(polygons, poly)
+			}
+			for _, circle := range area.Circles {
+				circles = append(circles, circle)
+			}
+			for _, geocode := range area.Geocodes {
+				gc := new(Geocode)
+				gc.valueName = geocode.ValueName
+				gc.value = geocode.Value
+				geocodes = append(geocodes, *gc)
+			}
+		}
 
 		// save Item to DB with index of Sent values as millis
-		//AddItem(item)
-		// send Item to MQTT
+		sentMillis := getMillis(it.sent)
+		expiredMillis := getMillis(it.expires)
+		newItem, _ := json.Marshal(it)
+		AddItem(uuid, strconv.Itoa(infoCount), sentMillis, expiredMillis, string(newItem))
+		//fmt.Println(it)
+
+		// also send Item to MQTT
+
 
 		// and increment the Item ID number
 		infoCount++
@@ -130,9 +178,18 @@ func AddAlert(raw string) string {
 	return response
 }
 
-/*func AddItem(uuid, sentMillis, expiresMillis, item) {
-
-}*/
+func AddItem(uuid string, itemCntr string, sentMillis string, expiresMillis string, item string) {
+	// store to DB
+	statement, err := db.Prepare("insert into Items (uuid, itemCntr, sentMillis, expiresMillis, item) values (?,?,?,?,?)")
+	if err != nil {
+		fmt.Println("(db.AddCAP) Prepare error:", err)
+	}
+	defer statement.Close()
+	_, err = statement.Exec(uuid, itemCntr, sentMillis, expiresMillis, item)
+	if err != nil {
+		fmt.Println("(db.AddCAP) Insert error:", err)
+	}
+}
 
 func AddCAP(raw string) string {
 	// parse raw XML
@@ -191,14 +248,21 @@ func getMillis(iso string) string {
 
 func GetItemsSince(millis string) string {
 	fmt.Println("(db.GetItemsSince) " + millis)
+
+
 	return ""
 }
 
 func GetCAP(uuid string) string {
 	fmt.Println("(db.GetCAP) " + uuid)
+
+
 	return ""
 }
 
-func getPolys(fips string) string {
-	return ""
+func getFipsPolys(fips string) []string {
+
+
+	
+	return []string{}
 }
