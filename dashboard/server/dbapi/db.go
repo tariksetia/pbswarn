@@ -1,70 +1,69 @@
 package dbapi
 
 import (
-	"fmt"
-	"time"
-	"strconv"
-	"strings"
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	cap "pbs.org/warn/cap"
 )
 
-type Resource struct {}
+type Resource struct{}
 
 type Geocode struct {
-	valueName	string
-	value		string
+	ValueName string `json:"valueName"`
+	Value     string `json:"value"`
 }
 
 type EventCode struct {
-	valueName	string
-	value		string
+	ValueName string `json:"valueName"`
+	Value     string `json:"value"`
 }
 
 type Parameter struct {
-	valueName	string
-	value		string
+	ValueName string `json:"valueName"`
+	Value     string `json:"value"`
 }
 
 type Item struct {
-	uuid         string
-	identifier   string
-	itemID       string
-	info         string
-	sent         string
-	expires      string
-	replaced     string
-	sender       string
-	senderName   string
-	status       string
-	scope        string
-	msgType      string
-	lang         string
-	category     string
-	event        string
-	eventCodes   []EventCode
-	urgency      string
-	severity     string
-	certainty    string
-	headline     string
-	CMAMText     string
-	CMAMLongText string
-	responseType string
-	parameters   []Parameter
-	description  string
-	instruction  string
-	contact      string
-	web          string
-	references   string
-	resources    []Resource
-	replacedBy   []string
-	areaDesc     []string
-	polygons     []string
-	circles      []string
-	geocodes     []Geocode
+	Uuid         string      `json:"uuid"`
+	Identifier   string      `json:"identifier"`
+	ItemID       string      `json:"itemId"`
+	Sent         string      `json:"sent"`
+	Expires      string      `json:"expires"`
+	Replaced     string      `json:"replaced"`
+	Sender       string      `json:"sender"`
+	SenderName   string      `json:"senderName"`
+	Status       string      `json:"status"`
+	Scope        string      `json:"scope"`
+	MsgType      string      `json:"msgType"`
+	Lang         string      `json:"lang"`
+	Category     string      `json:"category"`
+	Event        string      `json:"event"`
+	EventCodes   []EventCode `json:"eventCodes"`
+	Urgency      string      `json:"urgency"`
+	Severity     string      `json:"severity"`
+	Certainty    string      `json:"certainty"`
+	Headline     string      `json:"headline"`
+	CMAMtext     string      `json:"CMAMtext"`
+	CMAMlongtext string      `json:"CMAMlongtext"`
+	ResponseType string      `json:"responseType"`
+	Parameters   []Parameter `json:"parameters"`
+	Description  string      `json:"description"`
+	Instruction  string      `json:"instruction"`
+	Contact      string      `json:"contact"`
+	Web          string      `json:"web"`
+	References   string      `json:"references"`
+	Resources    []Resource  `json:"resources"`
+	ReplacedBy   []string    `json:"replacedBy"`
+	AreaDescs    []string    `json:"areaDescs"`
+	Polygons     []string    `json:"polygons"`
+	Circles      []string    `json:"circles"`
+	Geocodes     []Geocode   `json:"geocodes"`
 }
 
 var alert cap.Alert
@@ -74,123 +73,143 @@ var err error
 const dsn = "warn:warn@/warn"
 
 func init() {
-	// change this to support Mariadb
 	if db, err = sql.Open("mysql", dsn); err != nil {
 		fmt.Println("(db.init) sql.Open error", err.Error())
 	}
 }
 
-// AddAlert - from a raw CAP alert, stores raw and JSON-formatted version in DB
+// AddAlert - from a raw CAP alert, stores raw and JSON-formatted version in DB.  Updates and cancels are applied to Items.
+//    Items with geocodes only are augmented with polygsons representing FIPS boundaries.  MQTT update to the receivers
+//    should also occur here.
 func AddAlert(raw string) string {
 
 	// verify as CAP, else send heartbeat
-	if ( strings.Index(raw, "urn:oasis:names:tc:emergency:cap:1.2") < 0) {
+	if strings.Index(raw, "urn:oasis:names:tc:emergency:cap:1.2") < 0 {
+		// send heartbeat over MQTT
+
 		return "Heartbeat"
 	}
 	// save raw XML to table CAP
 	capResult := AddCAP(raw)
 	var alert cap.Alert
 	alert = cap.ParseCAP([]byte(raw))
-	uuid := alert.Identifier + "," + alert.Sender + "," + alert.Sent
-
+	uuid := alert.Sender + "," + alert.Identifier + "," + alert.Sent
+	sentMillis := getMillis(alert.Sent)
 	if (alert.MessageType == "Cancel") || (alert.MessageType == "Update") {
-		// get the references, for each, look up all Items, set their expired and replacedBy fields
-
+		// look up all Items with references uuid,
+		updateItems(alert.References, sentMillis, uuid)
 	}
-	var infoCount = 0
-	// for each XML Info
-	for _, info := range alert.Infos {
-		//fmt.Println(info)
-		// map Info to Item
-		it := new(Item)
-		it.uuid = uuid
-		it.itemID = strconv.Itoa(infoCount)
-		it.identifier = alert.Identifier
-		it.sender = alert.Sender
-		it.sent = alert.Sent
-		it.status = alert.Status
-		it.scope = alert.Scope
-		it.msgType = alert.MessageType
-		it.references = alert.References
-		it.lang = info.Language
-		it.category = info.Category
-		it.event = info.Event
-		it.responseType = info.ResponseType
-		it.urgency = info.Urgency
-		it.severity = info.Severity
-		it.certainty = info.Certainty
-		// Event Codes
-		for _, ecode := range info.EventCodes {
-			i := new(EventCode)
-			i.valueName = ecode.ValueName
-			i.value = ecode.Value
-			it.eventCodes = append(it.eventCodes, *i)
-		}
-		it.senderName = info.SenderName
-		it.headline = info.Headline
-		it.description = info.Description
-		it.instruction = info.Instruction
-		it.web = info.Web
-		it.contact = info.Contact
-		// Parameters
-		for _, param := range info.Parameters {
-			p := new(Parameter)
-			p.valueName = param.ValueName
-			p.value = param.Value
-			it.parameters = append(it.parameters, *p)
-		}
-		var geocodes []Geocode
-		var polygons []string
-		var circles []string
-		var areaDescs []string
-		// Areas
-		for _, area := range info.Areas {
-			areaDescs = append(areaDescs, " | " + area.Description)
-			for _, poly := range area.Polygons {
-				polygons = append(polygons, poly)
+	if capResult == "ADD" {
+		var infoCount = 0
+		// for each XML Info
+		for _, info := range alert.Infos {
+			//fmt.Println(info)
+			// map Info to Item
+			it := new(Item)
+			it.Uuid = uuid
+			it.ItemID = strconv.Itoa(infoCount)
+			it.Identifier = alert.Identifier
+			it.Sender = alert.Sender
+			it.Sent = alert.Sent
+			it.Status = alert.Status
+			it.Scope = alert.Scope
+			it.MsgType = alert.MessageType
+			it.References = alert.References
+			it.Lang = info.Language
+			it.Category = info.Category
+			it.Event = info.Event
+			it.ResponseType = info.ResponseType
+			it.Urgency = info.Urgency
+			it.Severity = info.Severity
+			it.Certainty = info.Certainty
+			it.Expires = info.Expires
+			// Event Codes
+			for _, ecode := range info.EventCodes {
+				i := new(EventCode)
+				i.ValueName = ecode.ValueName
+				i.Value = ecode.Value
+				it.EventCodes = append(it.EventCodes, *i)
 			}
-			for _, circle := range area.Circles {
-				circles = append(circles, circle)
+			it.SenderName = info.SenderName
+			it.Headline = info.Headline
+			it.Description = info.Description
+			it.Instruction = info.Instruction
+			it.Web = info.Web
+			it.Contact = info.Contact
+			// Parameters
+			for _, param := range info.Parameters {
+				p := new(Parameter)
+				p.ValueName = param.ValueName
+				p.Value = param.Value
+				it.Parameters = append(it.Parameters, *p)
+				if p.ValueName == "CMAMtext" {
+					it.CMAMtext = p.Value
+				}
+				if p.ValueName == "CMAMlongtext" {
+					it.CMAMlongtext = p.Value
+				}
 			}
-			for _, geocode := range area.Geocodes {
-				gc := new(Geocode)
-				gc.valueName = geocode.ValueName
-				gc.value = geocode.Value
-				geocodes = append(geocodes, *gc)
+			// Areas
+			for _, area := range info.Areas {
+				it.AreaDescs = append(it.AreaDescs, area.Description)
+				for _, poly := range area.Polygons {
+					it.Polygons = append(it.Polygons, poly)
+				}
+				for _, circle := range area.Circles {
+					it.Circles = append(it.Circles, circle)
+				}
+				for _, geocode := range area.Geocodes {
+					gc := new(Geocode)
+					gc.ValueName = geocode.ValueName
+					gc.Value = geocode.Value
+					it.Geocodes = append(it.Geocodes, *gc)
+				}
+				// augment polygons from FIPS where no geometries provided
+				if len(it.Polygons) == 0 && len(it.Circles) == 0 {
+					for _, geo := range area.Geocodes {
+						if geo.ValueName == "SAME" {
+							newPolys := getFipsPolys(geo.Value)
+							for _, p := range newPolys {
+								p,_ = strconv.Unquote(p)
+								it.Polygons = append(it.Polygons, p)
+							}
+						}
+					}
+				}
 			}
+			// store to Items db
+			news, _ := json.MarshalIndent(it, "", "    ")
+			// save Item to DB with index of Sent values as millis
+			expiresMillis := getMillis(it.Expires)
+			AddItem(uuid, strconv.Itoa(infoCount), sentMillis, expiresMillis, string(news))
+			// also send Item to MQTT
+
+
+
+			// and increment the Item ID number
+			infoCount++
 		}
-
-		// save Item to DB with index of Sent values as millis
-		sentMillis := getMillis(it.sent)
-		expiredMillis := getMillis(it.expires)
-		newItem, _ := json.Marshal(it)
-		AddItem(uuid, strconv.Itoa(infoCount), sentMillis, expiredMillis, string(newItem))
-		//fmt.Println(it)
-
-		// also send Item to MQTT
-
-
-		// and increment the Item ID number
-		infoCount++
-
 	}
-	response := capResult + ": " + uuid
+	response := capResult + " " + uuid
 	return response
 }
 
+
+// AddItem inserts an Item record into the Items database
 func AddItem(uuid string, itemCntr string, sentMillis string, expiresMillis string, item string) {
 	// store to DB
-	statement, err := db.Prepare("insert into Items (uuid, itemCntr, sentMillis, expiresMillis, item) values (?,?,?,?,?)")
+	statement, err := db.Prepare("insert into Items (uuid, itemId, sentMillis, expiresMillis, item) values (?,?,?,?,?)")
 	if err != nil {
 		fmt.Println("(db.AddCAP) Prepare error:", err)
 	}
 	defer statement.Close()
 	_, err = statement.Exec(uuid, itemCntr, sentMillis, expiresMillis, item)
 	if err != nil {
-		fmt.Println("(db.AddCAP) Insert error:", err)
+		fmt.Println("(db.AddItem) Insert error:", err)
 	}
 }
 
+// AddCAP adds a received CAP alert to the CAP db.  
 func AddCAP(raw string) string {
 	// parse raw XML
 	var alert cap.Alert
@@ -223,6 +242,15 @@ func parseISO(iso string) time.Time {
 	return t
 }
 
+func getMillis(iso string) string {
+	t, err := time.Parse(time.RFC3339, iso)
+	if err != nil {
+		fmt.Println("(db.AddCAP) error parsing", iso)
+		return ""
+	}
+	return strconv.FormatInt(t.UnixNano()/int64(time.Millisecond), 10)
+}
+
 func getLastExpireMillis(alrt cap.Alert) string {
 	// for each info, get expiration, return latest
 	var latest = ""
@@ -237,32 +265,77 @@ func getLastExpireMillis(alrt cap.Alert) string {
 	return latest
 }
 
-func getMillis(iso string) string {
-	t, err := time.Parse(time.RFC3339, iso)
+// GetItemsSince returns a JSON document containing all items with sent times after the supplied millis
+func GetItemsSince(millis string) []byte {
+	// for each returned item, parse JSON and append to results
+	statement, err := db.Prepare("select item from Items where sentMillis>(?)")
 	if err != nil {
-		fmt.Println("(db.AddCAP) error parsing sent from", iso)
-		return ""
+		fmt.Println("(db.GetItemsSince) Prepare statement error:", err)
 	}
-	return strconv.FormatInt(t.UnixNano()/int64(time.Millisecond), 10)
+	defer statement.Close()
+	rows, err := statement.Query(millis)
+	if err != nil {
+		fmt.Println("(db.GetItemsSince) DB error:", err)
+	}
+	newerItems := []Item{}
+	for rows.Next() {
+		var item string
+		var it = new(Item)
+		rows.Scan(&item)
+		json.Unmarshal([]byte(item), &it)
+		newerItems = append(newerItems, *it)
+	}
+	result, _ := json.MarshalIndent(newerItems, "", "    ")
+	return []byte(result)
 }
 
-func GetItemsSince(millis string) string {
-	fmt.Println("(db.GetItemsSince) " + millis)
-
-
-	return ""
+func updateItems(uuid string, expiresMillis string, replacedBy string) {
+	// update all with uuid, updating expiresMillis and replacedBy
+	statement, err := db.Prepare("update warn.items set expiresMillis=?, replacedby=? where uuid=?") 
+	if err != nil {
+		fmt.Println("(db.updateItems) Prepare statement error:", err)
+	}
+	defer statement.Close()
+	_, err = statement.Exec(uuid, expiresMillis, replacedBy)
+	if err != nil {
+		fmt.Println("(db.updateItems) DB error:", err)
+	}
 }
 
+
+
+// GetCAP retrieves a single raw CAP alert by its CAP UUID
 func GetCAP(uuid string) string {
-	fmt.Println("(db.GetCAP) " + uuid)
-
-
-	return ""
+	//fmt.Println("(db.GetCAP)", uuid)
+	stmt := "select xml from CAP where uuid=" + "\""+uuid+"\""
+	statement, err := db.Prepare(stmt)
+	if err != nil {
+		fmt.Println("(db.GetCAP) Prepare statement error:", err) 
+	}
+	defer statement.Close()
+	row := statement.QueryRow()
+	var xml string
+	row.Scan(&xml)
+	return xml
 }
 
-func getFipsPolys(fips string) []string {
 
 
-	
-	return []string{}
+func getFipsPolys(same string) []string {
+	statement, err := db.Prepare("select polygon from fips.fips where samecode=(?)")
+	if err != nil {
+		fmt.Println("(db.getFipsPolys) Prepare statement error:", err)
+	}
+	defer statement.Close()
+	rows, err := statement.Query(same)
+	if err != nil {
+		fmt.Println("(db.getFipsPolys) DB error:", err)
+	}
+	addedPolys := []string{}
+	for rows.Next() {
+		var polygon string
+		rows.Scan(&polygon)
+		addedPolys = append(addedPolys, polygon)
+	}
+	return addedPolys
 }
