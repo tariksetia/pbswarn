@@ -66,12 +66,6 @@ func main() {
 		w.Write([]byte(cap))
 	})
 
-	r.Get("/test/{val}", func(w http.ResponseWriter, r *http.Request) {
-		val := chi.URLParam(r, "val")
-		fmt.Println ("(web /test)", val)
-		w.Write([]byte("got here with "+val))
-	})
-
 	// and start the server
 	http.ListenAndServe(":9110", r)
 }
