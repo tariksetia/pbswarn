@@ -2,19 +2,14 @@ package main
 
 import (
 	"fmt"
-	//"io"
 	"io/ioutil"
-	//"time"
 	"net/http"
 	"strings"
-	//"context"
-	//"crypto/tls"
-	//"strconv"
 
 	_ "github.com/davecgh/go-spew/spew"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	//"github.com/go-chi/cors"
+	"github.com/go-chi/cors"
 	db "pbs.org/warn/dbapi"
 
 	//"golang.org/x/crypto/acme/autocert"
@@ -31,14 +26,14 @@ func main() {
 	//r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	/*cors := cors.New(cors.Options{
+	cors := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		AllowCredentials: true,
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	})
-	r.Use(cors.Handler)*/
+	r.Use(cors.Handler)
 
 	// Static file server
 	FileServer(r, "/", http.Dir("./static"))
