@@ -110,7 +110,7 @@ func AddAlert(raw string) string {
 			it.ItemID = strconv.Itoa(infoCount)
 			it.Identifier = alert.Identifier
 			it.Sender = alert.Sender
-			it.Sent = alert.Sent
+			it.Sent = getMillis(alert.Sent)
 			it.Status = alert.Status
 			it.Scope = alert.Scope
 			it.MsgType = alert.MessageType
@@ -122,7 +122,7 @@ func AddAlert(raw string) string {
 			it.Urgency = info.Urgency
 			it.Severity = info.Severity
 			it.Certainty = info.Certainty
-			it.Expires = info.Expires
+			it.Expires = getMillis(info.Expires)
 			// Event Codes
 			for _, ecode := range info.EventCodes {
 				i := new(EventCode)
@@ -180,7 +180,7 @@ func AddAlert(raw string) string {
 			// store to Items db
 			news, _ := json.MarshalIndent(it, "", "    ")
 			// save Item to DB with index of Sent values as millis
-			expiresMillis := getMillis(it.Expires)
+			expiresMillis := it.Expires
 			AddItem(uuid, strconv.Itoa(infoCount), sentMillis, expiresMillis, string(news))
 			// also send Item to MQTT
 
@@ -245,7 +245,7 @@ func parseISO(iso string) time.Time {
 func getMillis(iso string) string {
 	t, err := time.Parse(time.RFC3339, iso)
 	if err != nil {
-		fmt.Println("(db.AddCAP) error parsing", iso)
+		fmt.Println("(db.getMillis) error parsing \"" + iso + "\"")
 		return ""
 	}
 	return strconv.FormatInt(t.UnixNano()/int64(time.Millisecond), 10)
@@ -291,7 +291,7 @@ func GetItemsSince(millis string) []byte {
 
 func updateItems(uuid string, expiresMillis string, replacedBy string) {
 	// update all with uuid, updating expiresMillis and replacedBy
-	statement, err := db.Prepare("update warn.items set expiresMillis=?, replacedby=? where uuid=?") 
+	statement, err := db.Prepare("update Items set expiresMillis=?, replacedby=? where uuid=?") 
 	if err != nil {
 		fmt.Println("(db.updateItems) Prepare statement error:", err)
 	}
