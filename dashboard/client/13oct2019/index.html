@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="css/index.css" />
+</head>
+
+<body>
+    <div id="header">
+        <img src="img/WARN-Logo-Gold-PBS-Web-Sized.png" height="40" /> WARN Datacast &mdash; U.S. Wireless Emergency Alerts (WEA)
+        <div id="clock">
+            <span id="clockdigits"></span><br>
+            <span id="updatedigits"></span>
+        </div>
+    </div>
+
+    <div class="vwrapper">
+        <div class="wrapper">
+            <div class="box" id="mapDiv"></div>
+            <div class="handler"></div>
+            <div class="box" id="textDiv"></div>
+        </div>
+
+        <div class="v-handler"></div>
+        <div class="box" id="tableDiv">
+            <div id="listDiv"></div>
+            <div id="panelDiv"></div>
+        </div>
+    </div>
+</body>
+
+<!-- <script src="js/jquery-3.4.1.min.js"></script> -->
+
+<link rel="stylesheet" href="css/leaflet.css" />
+<script src="js/leaflet.js"></script>
+<script type="text/javascript" src="js/layout.js"></script>
+<script type="text/javascript" src="js/map.js"></script>
+<script type="text/javascript" src="js/table.js"></script>
+<script type="text/javascript" src="js/view.js"></script>
+<script type="text/javascript" src="js/luxon.min.js"></script>
+<script type="text/javascript" src="js/clock.js"></script>
+<script type="text/javascript" src="js/dexie.min.js"></script>
+<script type="text/javascript" src="js/db-loader.js"></script>
+
+<script type="text/javascript" src="js/dbapi.js"></script>
+
+</html>
