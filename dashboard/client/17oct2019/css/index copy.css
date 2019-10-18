@@ -1,0 +1,315 @@
+body {
+    margin: 20px;
+    background: #100;
+    overflow: hidden;
+}
+
+a {
+    text-decoration: none;
+}
+
+.wrapper {
+    background-color: #100;
+    color: #444;
+    display: flex;
+}
+
+.vwrapper {
+    background-color: #100;
+    color: #444;
+    flex-direction: column;
+    height: 100%;
+    display: flex;
+    flex: 1 1 auto;
+    margin-top: 10px;
+}
+
+.box {
+    background-color: #111;
+    color: #fff;
+    border-radius: 5px;
+    padding: 10px;
+    font-size: 150%;
+    box-sizing: border-box;
+    /* Use box-sizing so that element's outerwidth will match width property */
+    flex: 1 1 auto;
+    /* Allow box to grow and shrink, and ensure they are all equally sized */
+}
+
+#mapDiv {
+    flex: 1 1 auto;
+    width: 20%;
+}
+ 
+
+#viewDiv {
+ flex: 1 2 auto;
+ overflow-x: scroll;
+ overflow-y: hidden;
+}
+
+#docDiv {
+    position: absolute;
+    margin: 0;
+    max-width: 40%;
+    min-width: 350px;
+    padding-right: 10px;
+    overflow: hidden;
+    overflow-y: auto;
+    font-size: 90%;
+    /*border: 1px solid white*/
+ }
+
+#docDiv table {
+    max-width: 350px;
+    font-size: 65%;
+    line-height: 1.5;
+    border-collapse: collapse;
+    margin-right: 25px;
+
+}
+
+#docDiv tr td {
+    /*border: 1px solid lightblue;*/
+    padding-bottom: 5px;
+}
+
+#usc {
+    padding-bottom: 10px;
+    font-family: sans-serif;
+    font-size: 80%;
+}
+
+.label {
+    padding-top: 5px;
+    font-family: sans-serif;
+    font-size: 65%;
+    vertical-align: top;
+    font-weight: bold;
+    width: 80px;
+    color: #888;
+}
+
+.value {
+    margin-bottom: 25px;
+}
+
+#tableDiv {
+    display: inline-flex;
+    padding: 10px;
+    font-size: 80%;
+    flex-direction: row;
+    overflow-y: hidden;
+    overflow-x: hidden;
+    background-color: #100;
+}
+
+#listDiv {
+    margin: 0px;
+    margin-bottom: 10px;
+    border-radius: 2px;
+    min-height: 80px;
+    width: 60%;
+    min-width: 20px;
+    max-height: 300px;
+    background-color: #100;
+    font-size: 90%;
+    overflow-y: auto;
+}
+
+#panelDiv {
+    background-color: rgba(127,127,127,0.1);
+    height:100%;
+    width:35%;
+    margin-right: auto;
+    margin-left: auto;
+
+
+}
+
+.handler {
+    width: 10px;
+    padding: 0;
+    cursor: ew-resize;
+    flex: 0 0 auto;
+}
+
+.v-handler {
+    height: 10px;
+    padding: 0;
+    cursor: ns-resize;
+    flex: 0 0 auto;
+}
+
+#header {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    padding-top: 0px;
+    margin: 20px;
+    margin-left: 0;
+    margin-bottom: 10px;
+    background-color: #100;
+    color: #fff;
+    font-family: sans-serif;
+    align-items: center;
+    flex-grow: 0;
+}
+
+#clock {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    width: 190px;
+    height: 50px;
+}
+
+#clockdigits {
+    position: absolute;
+    text-align:center;
+    top: 0px;
+    width: 100%;
+    font-size: 22pt;
+    color: white;
+
+}
+
+#updatedigits {
+    position: absolute;
+    text-align:center;
+    bottom: 0px;
+    width: 100%;
+    color: white;
+    font-size: 8pt;
+}
+
+/*
+ * SCROLLBARS
+ */
+
+/* width */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background-color: rgba(127,127,127,0.1); 
+}
+ 
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: rgba(127,127,127,0.2); 
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(127,127,127,0.3); 
+}
+   
+/*
+ * THE LIST
+ */
+.listTable {
+    margin: 0px;
+    padding: 0px;
+    width: 100%;
+    min-width: 20px;
+    overflow-y: auto;
+    font-family: sans-serif;
+    color: antiquewhite;
+   border-collapse: collapse;
+}
+
+.expired {
+    margin: 0px;
+    padding: 0px;
+    width: 100%;
+    min-width: 20px;
+    overflow-y: auto;
+    font-family: sans-serif;
+    color: antiquewhite;
+    border-collapse: collapse;
+    opacity: 0.5;
+}
+
+.listTable tr td {
+     /*border: 1px solid white;*/
+     margin:3px;
+}
+
+.expired tr td {
+     /*border: 1px solid white;*/
+     margin:3px;
+}
+
+.slug {
+    color: lightblue;
+    padding-right: 10px;
+    font-size: 130%;
+    cursor: pointer;
+}
+
+/* URGENCY styles */
+.Immediate {
+    color: rgba(248, 60, 60, 1);
+}
+
+.Expected {
+    color: rgba(243, 219, 33, 0.8);
+}
+
+.Future {
+    color: rgba(70, 248, 115, 0.667);
+}
+
+.Past {
+    color: rgba(30, 84, 235, 0.667);
+
+}
+
+.Unknown {
+    background-color: #999a;
+}
+
+
+/* SEVERITY styles */
+.Extreme {
+    color: rgba(248, 60, 60, 1);
+}
+
+.Severe {
+    color: rgba(243, 219, 33, 0.8);
+}
+
+.Moderate {
+    color: rgba(70, 248, 115, 0.667);
+}
+
+.Minor {
+    color: rgba(30, 84, 235, 0.667);
+}
+
+
+/* CERTAINTY styles */
+.Observed {
+    color: rgba(248, 60, 60, 1);
+}
+
+.Likely {
+    color: rgba(243, 219, 33, 0.8);
+}
+
+.Possible {
+    color: rgba(70, 248, 115, 0.667);
+}
+
+.Unlikely {
+    color: rgba(30, 84, 235, 0.667);
+}
+
+/* turn down the credits bar on the map */
+.leaflet-control-attribution {
+    opacity: 0.5; 
+}
+
