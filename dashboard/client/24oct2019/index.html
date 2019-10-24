@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="css/index.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <div id="header">
+        <table >
+        <tr><td><img src="img/pbs-logo.png" height="40" /></td>
+            <td id="headerText">&nbsp;WARN Datacast &mdash; U.S. Wireless Emergency Alerts (WEA)</td>
+        </tr></table>
+        <div id="clock">
+            <span id="clockdigits"></span><br>
+            <span id="updatedigits"></span>
+        </div>
+    </div>
+
+    <div class="vwrapper">
+        <div class="wrapper" id="wrapper">
+            <div class="box" id="mapDiv"></div>
+            <div class="handler"></div>
+            <div class="box" id="viewDiv"></div>
+        </div>
+
+        <div class="v-handler"></div>
+        <div class="box" id="tableDiv">
+            <div id="listDiv"></div>
+            <div id="panelDiv">
+                <br><br>
+                <table id="contentFilters">
+                    <tr>
+                        <td >
+                            <div class="button" id="scanBtn">Scan</div>
+                        </td>
+                        <td ><input type="checkbox" id="expiredBtn" class="filterBox" checked>Expired</td>
+                        <td ></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <th colspan="2">CAP Categories<br><hr></th>
+                    </tr>
+                    <tr>
+                        <td><div class="button" id="latestBtn">Latest</div></td>
+                        <td class="filterItem"><input type="checkbox" name="Geo" checked="" class="filterBox">Geo</td>
+                        <td class="filterItem"><input type="checkbox" name="Health" checked="" class="filterBox">Health </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            &nbsp;
+                        </td>
+                        <td class="filterItem"><input type="checkbox" name="Met" checked="" class="filterBox">Met</td>
+                        <td class="filterItem"><input type="checkbox" name="Env" checked="" class="filterBox">Env </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="button" id="resetBtn" onclick="resetMap()">Reset</div>
+                        </td>
+                        <td class="filterItem"><input type="checkbox" name="Safety" checked="" class="filterBox">Safety</td>
+                        <td class="filterItem"><input type="checkbox" name="Transport" checked="" class="filterBox">Transport </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            &nbsp;
+                        </td>
+                        <td class="filterItem"><input type="checkbox" name="Security" checked="" class="filterBox">Security</td>
+                        <td class="filterItem"><input type="checkbox" name="Infra" checked="" class="filterBox">Infra </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="button" id="rawviewBtn">&nbsp;</div>
+                        </td>
+                        <td class="filterItem"><input type="checkbox" name="Rescue" checked="" class="filterBox">Rescue</td>
+                        <td class="filterItem"><input type="checkbox" name="CBRNE" checked="" class="filterBox">CBRNE </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            &nbsp;
+                        </td>
+                        <td class="filterItem"><input type="checkbox" name="Fire" checked="" class="filterBox">Fire</td>
+                        <td class="filterItem"><input type="checkbox" name="Other" checked="" class="filterBox">Other </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="button" id="geofilterBtn">&nbsp;</div>
+                        </td>
+                        <td>
+                            &nbsp;
+                        </td>
+                         <td>
+                            &nbsp;
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+
+<link rel="stylesheet" href="css/leaflet.css" />
+<script src="js/leaflet.js"></script>
+<script type="text/javascript" src="js/layout.js"></script>
+<script type="text/javascript" src="js/map.js"></script>
+<script type="text/javascript" src="js/table.js"></script>
+<script type="text/javascript" src="js/view.js"></script>
+<script type="text/javascript" src="js/luxon.min.js"></script>
+<script type="text/javascript" src="js/clock.js"></script>
+<script type="text/javascript" src="js/dexie.min.js"></script>
+<script type="text/javascript" src="js/dbapi.js"></script>
+
+
+</html>
