@@ -1,0 +1,13 @@
+[Unit]
+ Description=PBS WARN Datacast Receiver
+
+ [Service]
+ ExecStart=/home/pi/rcvr
+ WorkingDirectory=/home/pi
+ Restart=always
+ RestartSec=5
+ StartLimitIntervalSec=0
+ User=pi
+
+ [Install]
+ WantedBy=multi-user.target
