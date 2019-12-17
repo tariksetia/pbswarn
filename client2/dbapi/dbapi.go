@@ -22,6 +22,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	cap "pbs.org/warnmonitor/cap"
 	cmam "pbs.org/warnmonitor/cmam"
+	config "pbs.org/warnmonitor/config"
 )
 
 
@@ -87,12 +88,13 @@ type Item struct {
 	Geocodes     []Geocode   `json:"geocodes"`
 }
 
-
 const dsn = "warn:warn@/warn"
 var db *sql.DB
 var err error
+var cfg config.Configuration
 
 func init() {
+	cfg = config.GetConfig()
 	if db, err = sql.Open("mysql", dsn); err != nil {
 		fmt.Println("(dbapi.init) sql.Open error", err.Error())
 	}
@@ -256,6 +258,71 @@ func addItem(uuidMillis string, itemId string, sentMillis string, expiresMillis 
 	if err != nil {
 		fmt.Println("(dbapi.addItem) Insert error:", err)
 	}
+}
+
+
+//GetAll... return the latest update time and all current items 
+func GetItems() string {
+	// purge all items prior to AllAlertsRetentionDays
+	trimItems()
+	// purge LinkTest items prior to LinkTestLookbackMinutes
+	trimLinkTests()
+	// get all remaining items, sorted by sentMillis
+	var items []Item
+	stmt := "select json from Items order by sentMillis desc"
+	statement, err := db.Prepare(stmt)
+	if err != nil {
+		fmt.Println("(dbapi.GetAlertXML) Prepare statement error:", err) 
+	}
+	defer statement.Close()
+	rows, _ := statement.Query()
+	defer rows.Close()
+	// scan the rows into Items, add to return slice
+	for rows.Next() {
+		var jsontext string
+		err := rows.Scan(&jsontext)
+		var item Item
+		json.Unmarshal([]byte(jsontext), &item)
+		if err != nil {
+			fmt.Println("(dbapi.GetItems) scanning ", err.Error())
+		}
+		items = append(items, item)
+	}
+	response, _ := json.Marshal(items)
+	return string(response)
+}
+
+
+func trimItems() {
+	retainDays, _ := strconv.ParseInt(cfg.AllAlertsRetentionDays, 10, 64)
+	retainItems := retainDays * 24 * 60 * 60 * 1000
+	if retainItems < 3600000 {// in case of config error, skip this action  
+		return
+	}
+	now := time.Now().UnixNano() / 1000000
+	itemWindow := now - retainItems
+	stmt := "delete from Items where sentMillis<" + "\""+strconv.FormatInt(itemWindow, 10)+"\""
+	statement, err := db.Prepare(stmt)
+	if err != nil {
+		fmt.Println("(dbapi.GetAlertXML) Prepare statement error:", err) 
+	}
+	defer statement.Close()
+	statement.Exec()
+}
+
+
+func trimLinkTests() {
+	retainMinutes, _ := strconv.ParseInt(cfg.LinkTestLookbackMinutes, 10, 64)
+	retainLTs := retainMinutes * 60 * 1000
+	now := time.Now().UnixNano() / 1000000
+	itemWindow := now - retainLTs
+	stmt := "delete from Items where length(uuidMillis) <  10 and sentMillis<" + "\""+strconv.FormatInt(itemWindow, 10)+"\""
+	statement, err := db.Prepare(stmt)
+	if err != nil {
+		fmt.Println("(dbapi.GetAlertXML) Prepare statement error:", err) 
+	}
+	defer statement.Close()
+	statement.Exec()
 }
 
 
