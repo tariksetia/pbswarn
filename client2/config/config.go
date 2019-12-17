@@ -24,6 +24,8 @@ type Configuration struct {
     PID string
     WebPort string
     Freq string 
+    LinkTestLookbackMinutes string
+    AllAlertsRetentionDays string
 }
 
 var (
