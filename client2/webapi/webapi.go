@@ -4,11 +4,12 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 12/15/2019
+ *  Version 12/17/2019
  *
  *************************************************************/
 
 package main
+
 
 import (
 	//"fmt"
@@ -21,8 +22,14 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
 	dbapi "pbs.org/warnmonitor/dbapi"
-
+	config "pbs.org/warnmonitor/config"
 )
+
+var cfg config.Configuration
+
+func init() {
+	cfg = config.GetConfig()
+}
 
 func main() {
 
@@ -45,8 +52,13 @@ func main() {
 
 	// Static file server
 	FileServer(r, "/", http.Dir("/home/pi/web"))
-
-
+	
+	
+	r.Get("/getItems", func(w http.ResponseWriter, r *http.Request) {
+		items := dbapi.GetItems()
+		w.Write([]byte(items))
+	})
+	
 
 	r.Get("/getSince/{millis}", func(w http.ResponseWriter, r *http.Request) {
 		millis := chi.URLParam(r, "millis")
@@ -63,7 +75,8 @@ func main() {
 	})
 
 	// and start the server
-	http.ListenAndServe(":9110", r)
+	http.ListenAndServe(":" + cfg.WebPort, r)
+	select{}
 }
 
 // FileServer ... serves a static file system
