@@ -12,7 +12,7 @@ package main
 
 
 import (
-	//"fmt"
+	"fmt"
 	//"io/ioutil"
 	"net/http"
 	"strings"
@@ -29,6 +29,7 @@ var cfg config.Configuration
 
 func init() {
 	cfg = config.GetConfig()
+	fmt.Println("(webapi.init) Opening on port " + cfg.WebPort)
 }
 
 func main() {
