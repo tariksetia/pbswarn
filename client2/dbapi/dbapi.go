@@ -193,6 +193,10 @@ func AddAlert(alert cap.Alert) {
 		// and increment the Item ID number
 		infoCount++
 	}
+	// purge all items prior to AllAlertsRetentionDays
+	trimItems()
+	// purge LinkTest items prior to LinkTestLookbackMinutes
+	trimLinkTests()
 }
 
 
@@ -263,11 +267,7 @@ func addItem(uuidMillis string, itemId string, sentMillis string, expiresMillis 
 
 //GetAll... return the latest update time and all current items 
 func GetItems() string {
-	// purge all items prior to AllAlertsRetentionDays
-	trimItems()
-	// purge LinkTest items prior to LinkTestLookbackMinutes
-	trimLinkTests()
-	// get all remaining items, sorted by sentMillis
+	// get all  items, sorted by sentMillis
 	var items []Item
 	stmt := "select json from Items order by sentMillis desc"
 	statement, err := db.Prepare(stmt)
