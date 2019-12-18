@@ -95,9 +95,12 @@ var cfg config.Configuration
 
 func init() {
 	cfg = config.GetConfig()
-	if db, err = sql.Open("mysql", dsn); err != nil {
+	if db, err = sql.Open("mysql", cfg.Dsn); err != nil {
 		fmt.Println("(dbapi.init) sql.Open error", err.Error())
+		panic("(dbapi.init) sql.Open error"+ err.Error())
 	}
+	fmt.Println("(dbapi.init) saving " + cfg.LinkTestLookbackMinutes + " minutes of link tests.")
+	fmt.Println("(dbapi.init) saving " + cfg.AllAlertsRetentionDays + " days of alerts.")
 }
 
 
@@ -297,6 +300,7 @@ func trimItems() {
 	retainDays, _ := strconv.ParseInt(cfg.AllAlertsRetentionDays, 10, 64)
 	retainItems := retainDays * 24 * 60 * 60 * 1000
 	if retainItems < 3600000 {// in case of config error, skip this action  
+		fmt.Println("(dbapi.trimItems) too low", retainItems)
 		return
 	}
 	now := time.Now().UnixNano() / 1000000
