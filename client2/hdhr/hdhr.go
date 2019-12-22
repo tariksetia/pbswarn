@@ -4,13 +4,16 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
- *  Version 12/9/2019
+ *  warnmonitor.hdhr.go
+ *  Version 12/21/2019
  *
  *************************************************************/
+
 package hdhr
 
 import (
 	"bytes"
+	"time"
 	"fmt"
 	"net"
 	"os/exec"
@@ -18,17 +21,28 @@ import (
 	"strings"
 )
 
-// set up the HDHomeRun receiver
-func Tune() {
-	cfg := config.GetConfig()
+var deviceID string
+var deviceIP string
+var cfg config.Configuration
+var freq string
+var RestartReader bool
+var myIP string
+
+func init() {
+	cfg = config.GetConfig()
+	freq = cfg.Freq
 	// discover receiver
 	response := execCmd("/usr/bin/hdhomerun_config", "discover")
-	deviceID := strings.Split(response, " ")[2]
-	deviceIP := strings.Split(response, " ")[5]
-	myIP := getOutboundIP().String()
+	deviceID = strings.Split(response, " ")[2]
+	deviceIP = strings.Split(response, " ")[5]
+}
+
+// set up the HDHomeRun receiver
+func Tune() {
+	myIP = getOutboundIP().String()
 	fmt.Println("My IP is", myIP)
 	fmt.Print("Device ", deviceID, " is at ", deviceIP)
-	execCmd("/usr/bin/hdhomerun_config", deviceID, "set", "/tuner1/channel", "8vsb:"+cfg.Freq+"000000")
+	SetFreq(freq)
 	execCmd("/usr/bin/hdhomerun_config", deviceIP, "set", "/tuner1/filter", cfg.PID)
 	execCmd("/usr/bin/hdhomerun_config", deviceID, "set", "/tuner1/target", "udp://"+myIP+":"+cfg.UDPport)
 	fmt.Print(execCmd("/usr/bin/hdhomerun_config", deviceID, "get", "/tuner1/status"))
@@ -53,3 +67,18 @@ func execCmd(cmdStr string, args ...string) string {
 	}
 	return out.String()
 }
+
+func SetFreq(freq string) {
+	RestartReader = true
+	fmt.Println("(hdhr.SetFreq) "+ freq)
+	time.Sleep(300)
+	execCmd("/usr/bin/hdhomerun_config", deviceID, "set", "/tuner1/channel", "8vsb:"+freq+"000000")
+	execCmd("/usr/bin/hdhomerun_config", deviceIP, "set", "/tuner1/filter", cfg.PID)
+	execCmd("/usr/bin/hdhomerun_config", deviceID, "set", "/tuner1/target", "udp://"+myIP+":"+cfg.UDPport)
+	fmt.Println("(hdhr.SetFreq) done")
+}
+
+func GetStatus() string {
+	return execCmd("/usr/bin/hdhomerun_config", deviceID, "get", "/tuner1/status")
+}
+
