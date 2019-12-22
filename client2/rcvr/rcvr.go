@@ -4,6 +4,7 @@
  *  Contact: <warn@pbs.org>
  *  All Rights Reserved.
  *
+ *  warnmonitor.rcvr.go
  *  Version 12/17/2019
  *
  *************************************************************/
@@ -22,29 +23,32 @@ import (
 	"os/exec"
 	"strings"
 
-	dbapi "pbs.org/warnmonitor/dbapi"
-	config "pbs.org/warnmonitor/config"
-	hdhr "pbs.org/warnmonitor/hdhr"
 	cap "pbs.org/warnmonitor/cap"
+	config "pbs.org/warnmonitor/config"
+	dbapi "pbs.org/warnmonitor/dbapi"
+	hdhr "pbs.org/warnmonitor/hdhr"
 )
 
 var (
-	cfg 		config.Configuration
-	inMessage 	bool
-	message 	[]byte
-	myIP 		string
-	replacer 	strings.Replacer
-	currentIP 	string 
+	cfg                        config.Configuration
+	inMessage                  bool
+	message                    []byte
+	myIP                       string
+	replacer                   strings.Replacer
+	currentIP                  string
 	currentNetworkHardwareName string
-	deviceID 	string
-	alerts 		chan cap.Alert
+	deviceID                   string
+	alerts                     chan cap.Alert
+	pc                         net.PacketConn
+	err                        error
+	packets                    chan []byte
+	haltReader                 bool
 )
-
 
 func init() {
 	cfg = config.GetConfig()
+	hdhr.RestartReader = false
 }
-
 
 func main() {
 	inMessage = false
@@ -52,7 +56,7 @@ func main() {
 	// listen to incoming udp packets
 	myIP = getOutboundIP().String()
 	// set up UDP client
-	packets := make(chan []byte, 20)
+	packets := make(chan []byte, 20) // main -> reader -> [packets] -> main -> slice -> filter -> slice -> assemble -> [alerts] -> spooler
 	go reader(packets)
 	// set up print spooler
 	alerts = make(chan cap.Alert, 5)
@@ -67,7 +71,6 @@ func main() {
 	}
 }
 
-
 // Get preferred outbound ip of this machine
 func getOutboundIP() net.IP {
 	myIP := execCmd("/sbin/ifconfig", "eth0")
@@ -76,35 +79,38 @@ func getOutboundIP() net.IP {
 	return net.ParseIP(myIP)
 }
 
-
 // UDP client (must lanuch before tuner is set)
 func reader(ch chan []byte) {
-	pc, err := net.ListenPacket("udp", myIP+":"+cfg.UDPport)
+	pc, err = net.ListenPacket("udp", myIP+":"+cfg.UDPport)
 	if err != nil {
 		fmt.Println("(rcvr.reader)", err)
 	}
 	defer pc.Close()
-	for {
+	for !hdhr.RestartReader {
 		buffer := make([]byte, 4096)
 		pc.ReadFrom(buffer)
-		//fmt.Println("(rcvr.reader)", string(buffer))
 		ch <- buffer
+		fmt.Print(".")
 	}
+	hdhr.RestartReader = false
+	fmt.Println("(rcvr.reader) restarting")
+	pc.Close()
+	go reader(ch)
 }
 
 
 // parse a UDP packet into a slice of MPEG Packet content strings
 func slice(msg []byte) {
+	fmt.Print(":")
 	items := split(msg, 188)
 	for _, v := range items {
 		item := filter(v)
 		if len(item) > 0 {
-			//fmt.Println("(rcvr.slice)", string(item))
+			fmt.Print("!")
 			assemble(item)
 		}
 	}
 }
-
 
 // filter cruft from each MPEG packet
 func filter(item []byte) []byte {
@@ -122,8 +128,7 @@ func filter(item []byte) []byte {
 	return item
 }
 
-
-// filter the UDP packets, and assemble XML from start to finish
+// filter the MPEG packets, and assemble XML from start to finish
 func assemble(msg []byte) {
 	if len(msg) == 0 {
 		return
@@ -145,6 +150,7 @@ func assemble(msg []byte) {
 		message = message[:en]                                           // trim off trailing garbage
 		message = append(message, []byte("</CMAC_Alert_Attributes>")...) // repair the closing tag
 		inMessage = false
+		fmt.Print("_")
 		dbapi.AddLinkTest(message)
 	}
 	// repair and trim the end of CAP Alert, record uptime
@@ -164,7 +170,6 @@ func assemble(msg []byte) {
 	}
 }
 
-
 // spool alerts off channel to print/DB
 func spooler(ch chan cap.Alert) {
 	for {
@@ -178,7 +183,6 @@ func spooler(ch chan cap.Alert) {
 	}
 }
 
-
 // execute a system-level command
 func execCmd(cmdStr string, args ...string) string {
 	cmd := exec.Command(cmdStr, args...)
@@ -190,7 +194,6 @@ func execCmd(cmdStr string, args ...string) string {
 	}
 	return out.String()
 }
-
 
 // split packet into MPEG Packets
 func split(buf []byte, lim int) [][]byte {
@@ -206,7 +209,6 @@ func split(buf []byte, lim int) [][]byte {
 	return chunks
 }
 
-
 // serialize a CAP object
 func toXML(alert cap.Alert) string {
 	cap, err := xml.MarshalIndent(alert, "", "    ") // prettiness
@@ -217,5 +219,3 @@ func toXML(alert cap.Alert) string {
 	// return XML with XML-escaped newlines ("&#xA;") replaced
 	return "<?xml version='UTF-8' encoding='UTF-8'?>\n" + replacer.Replace(string(cap))
 }
-
-
