@@ -1,0 +1,10 @@
+[Unit]
+Description=Process UDP Packets from PBS WARN receiver
+
+[Service]
+Type=simple
+ExecStart=/home/pbs/warnmonitor
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
